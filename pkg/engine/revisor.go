@@ -1,4 +1,4 @@
-package ksync
+package engine
 
 import (
 	"crypto/sha1"

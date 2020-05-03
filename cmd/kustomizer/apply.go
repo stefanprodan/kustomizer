@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,12 +9,12 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/kustomize/api/filesys"
 
-	"github.com/stefanprodan/kustomizer/pkg/ksync"
+	"github.com/stefanprodan/kustomizer/pkg/engine"
 )
 
 var applyCmd = &cobra.Command{
 	Use:   "apply [path]",
-	Short: "Apply kustomization and prune previous applied Kubernetes objects",
+	Short: "Run kustomization and prune previous applied Kubernetes objects",
 	RunE:  applyCmdRun,
 }
 
@@ -25,6 +24,7 @@ var (
 	nextRevision string
 	prevRevision string
 	dryRun       bool
+	timeout      time.Duration
 )
 
 func init() {
@@ -32,6 +32,7 @@ func init() {
 	applyCmd.Flags().StringVarP(&name, "name", "n", "", "name")
 	applyCmd.Flags().StringVarP(&nextRevision, "revision", "r", "", "revision")
 	applyCmd.Flags().StringVarP(&prevRevision, "prev-revision", "p", "", "previous revision")
+	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
 	applyCmd.Flags().BoolVar(&dryRun, "dry-run", false, "dry run")
 
 	rootCmd.AddCommand(applyCmd)
@@ -44,12 +45,12 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	base := args[0]
 	fs := filesys.MakeFsOnDisk()
 
-	revisor, err := ksync.NewRevisior(group, name, nextRevision, prevRevision)
+	revisor, err := engine.NewRevisior(group, name, nextRevision, prevRevision)
 	if err != nil {
 		return err
 	}
 
-	transformer, err := ksync.NewTransformer(fs, revisor)
+	transformer, err := engine.NewTransformer(fs, revisor)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	generator, err := ksync.NewGenerator(fs, revisor)
+	generator, err := engine.NewGenerator(fs, revisor)
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	builder, err := ksync.NewBuilder(fs)
+	builder, err := engine.NewBuilder(fs)
 	if err != nil {
 		return err
 	}
@@ -78,15 +79,17 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	applier, err := ksync.NewApplier(fs, revisor)
+	applier, err := engine.NewApplier(fs, revisor, timeout)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	err = applier.Run(manifests, dryRun)
+	if err != nil {
+		return err
+	}
 
-	err = applier.Apply(ctx, manifests, dryRun)
+	gc, err := engine.NewGarbageCollector(revisor, timeout)
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		fmt.Println(obj)
 	}
 
-	err = applier.Prune(ctx, dryRun, write)
+	err = gc.Prune(dryRun, write)
 	if err != nil {
 		return err
 	}

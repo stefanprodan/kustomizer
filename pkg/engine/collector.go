@@ -1,23 +1,19 @@
-package ksync
+package engine
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
 	"strings"
-
-	"sigs.k8s.io/kustomize/api/filesys"
+	"time"
 )
 
-type Applier struct {
-	rv *Revisor
-	fs filesys.FileSystem
+type GarbageCollector struct {
+	rv      *Revisor
+	timeout time.Duration
 }
 
-func NewApplier(fs filesys.FileSystem, revisor *Revisor) (*Applier, error) {
+func NewGarbageCollector(revisor *Revisor, timeout time.Duration) (*GarbageCollector, error) {
 	if revisor == nil {
 		return nil, fmt.Errorf("revisor is nil")
 	}
@@ -26,38 +22,23 @@ func NewApplier(fs filesys.FileSystem, revisor *Revisor) (*Applier, error) {
 		return nil, fmt.Errorf("kubectl not found")
 	}
 
-	return &Applier{
-		rv: revisor,
-		fs: fs,
+	return &GarbageCollector{
+		rv:      revisor,
+		timeout: timeout,
 	}, nil
 }
 
-func (a *Applier) Apply(ctx context.Context, filePath string, dryRun bool) error {
-	command := fmt.Sprintf("kubectl apply -f %s", filePath)
-	if dryRun {
-		command = fmt.Sprintf("%s --dry-run=client", command)
-	}
+func (gc *GarbageCollector) Prune(dryRun bool, write func(string)) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gc.timeout+time.Second)
+	defer cancel()
 
-	var stdoutBuf, stderrBuf bytes.Buffer
-	c := exec.CommandContext(ctx, "/bin/sh", "-c", command)
-	c.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
-	c.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
-
-	if err := c.Run(); err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
-
-func (a *Applier) Prune(ctx context.Context, dryRun bool, write func(string)) error {
-	namespacedKinds, err := a.listKinds(ctx, true)
+	namespacedKinds, err := gc.listKinds(ctx, true)
 	if err != nil {
 		return err
 	}
 
 	for _, kind := range strings.Split(namespacedKinds, ",") {
-		o, err := a.delete(ctx, kind, a.rv.PrevSelectors(), dryRun)
+		o, err := gc.delete(ctx, kind, gc.rv.PrevSelectors(), dryRun)
 		if err != nil {
 			return err
 		}
@@ -66,13 +47,13 @@ func (a *Applier) Prune(ctx context.Context, dryRun bool, write func(string)) er
 		}
 	}
 
-	clusterKinds, err := a.listKinds(ctx, false)
+	clusterKinds, err := gc.listKinds(ctx, false)
 	if err != nil {
 		return err
 	}
 
 	for _, kind := range strings.Split(clusterKinds, ",") {
-		o, err := a.delete(ctx, kind, a.rv.PrevSelectors(), dryRun)
+		o, err := gc.delete(ctx, kind, gc.rv.PrevSelectors(), dryRun)
 		if err != nil {
 			return err
 		}
@@ -83,7 +64,7 @@ func (a *Applier) Prune(ctx context.Context, dryRun bool, write func(string)) er
 	return nil
 }
 
-func (a *Applier) delete(ctx context.Context, kind string, selector string, dryRun bool) (string, error) {
+func (gc *GarbageCollector) delete(ctx context.Context, kind string, selector string, dryRun bool) (string, error) {
 	cmd := fmt.Sprintf("kubectl delete %s --all-namespaces -l %s", kind, selector)
 	if dryRun {
 		cmd = fmt.Sprintf("%s --dry-run=server", cmd)
@@ -97,7 +78,7 @@ func (a *Applier) delete(ctx context.Context, kind string, selector string, dryR
 	}
 }
 
-func (a *Applier) listKinds(ctx context.Context, namespaced bool) (string, error) {
+func (gc *GarbageCollector) listKinds(ctx context.Context, namespaced bool) (string, error) {
 	exclude := `grep -vE "(events|nodes)"`
 	flat := `tr "\n" "," | sed -e 's/,$//'`
 	cmd := fmt.Sprintf(`kubectl api-resources --cached=true --namespaced=%t --verbs=delete -o name | %s | %s`,
