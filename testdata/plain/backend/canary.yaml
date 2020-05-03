@@ -1,0 +1,23 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: podinfo
+  namespace: dev
+spec:
+  progressDeadlineSeconds: 600
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: podinfo
+  autoscalerRef:
+    apiVersion: autoscaling/v2beta1
+    kind: HorizontalPodAutoscaler
+    name: podinfo
+  service:
+    port: 9898
+    portDiscovery: true
+  skipAnalysis: false
+  analysis:
+    interval: 15s
+    threshold: 10
+    iterations: 5
