@@ -17,7 +17,7 @@ import (
 
 var applyCmd = &cobra.Command{
 	Use:   "apply [path]",
-	Short: "Run kustomization and prune previous applied Kubernetes objects",
+	Short: "Apply kustomization and prune previous applied Kubernetes objects",
 	RunE:  applyCmdRun,
 }
 
@@ -31,8 +31,8 @@ var (
 
 func init() {
 	applyCmd.Flags().StringVar(&group, "group", "kustomizer", "group")
-	applyCmd.Flags().StringVarP(&name, "name", "", "", "name")
-	applyCmd.Flags().StringVarP(&revision, "revision", "r", "", "revision")
+	applyCmd.Flags().StringVarP(&name, "name", "", "", "name of this kustomization")
+	applyCmd.Flags().StringVarP(&revision, "revision", "r", "", "revision of this kustomization")
 	applyCmd.Flags().StringVarP(&cfgNamespace, "gc-namespace", "", "default", "namespace to store the GC snapshot ConfigMap")
 	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
 
@@ -73,6 +73,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	err = transformer.Generate(base)
 	if err != nil {
 		return err
@@ -82,6 +83,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	err = generator.Generate(base)
 	if err != nil {
 		return err
@@ -92,8 +94,8 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	manifests := filepath.Join(base, revisor.ManifestFile())
-	err = builder.Generate(base, manifests)
+	manifest := filepath.Join(base, revisor.ManifestFile())
+	err = builder.Generate(base, manifest)
 	if err != nil {
 		return err
 	}
@@ -103,7 +105,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = applier.Run(manifests, false)
+	err = applier.Run(manifest, false)
 	if err != nil {
 		return err
 	}
@@ -119,7 +121,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = gc.Run(manifests, cfgNamespace, write)
+	err = gc.Run(manifest, cfgNamespace, write)
 	if err != nil {
 		return err
 	}
