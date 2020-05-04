@@ -44,9 +44,10 @@ jobs:
           rm -rf testdata/plain/frontend
           ./bin/kustomizer apply testdata/plain/ --name=test --revision=1.1.0
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
+          ./bin/kustomizer delete --name=test
       - name: Debug failure
         if: failure()
         run: |
           kubectl version --client --short
-          kustomize version --short
+          kubectl -n default get configmaps -oyaml
           kubectl -n kustomizer-demo get all

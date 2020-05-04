@@ -78,6 +78,32 @@ func (gc *GarbageCollector) Run(manifestsFile string, cfgNamespace string, write
 	return nil
 }
 
+func (gc *GarbageCollector) Cleanup(cfgNamespace string, write func(string)) error {
+	cfg, err := gc.getSnapshot(cfgNamespace)
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := NewSnapshotFromConfigMap(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = gc.prune(*snapshot, false, write)
+	if err != nil {
+		return err
+	}
+
+	msg, err := gc.deleteSnapshot(cfgNamespace)
+	if err != nil {
+		return err
+	}
+
+	write(msg)
+
+	return nil
+}
+
 func (gc *GarbageCollector) prune(snapshot Snapshot, dryRun bool, write func(string)) error {
 	selector := gc.rv.PrevSelectors(snapshot.Revision)
 	for ns, kinds := range snapshot.NamespacedKinds() {
@@ -133,6 +159,16 @@ func (gc *GarbageCollector) getSnapshot(cfgNamespace string) (string, error) {
 
 func (gc *GarbageCollector) applySnapshot(cfg string) (string, error) {
 	cmd := fmt.Sprintf("echo '%s' |kubectl apply -f-", cfg)
+	command := exec.Command("/bin/sh", "-c", cmd)
+	if output, err := command.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("%s", string(output))
+	} else {
+		return strings.TrimSuffix(string(output), "\n"), nil
+	}
+}
+
+func (gc *GarbageCollector) deleteSnapshot(cfgNamespace string) (string, error) {
+	cmd := fmt.Sprintf("kubectl -n %s delete configmap %s", cfgNamespace, gc.rv.SnapshotName())
 	command := exec.Command("/bin/sh", "-c", cmd)
 	if output, err := command.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s", string(output))
