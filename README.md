@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/github/license/stefanprodan/kustomizer.svg)](https://github.com/stefanprodan/kustomizer/blob/master/LICENSE)
 [![release](https://img.shields.io/github/release/stefanprodan/kustomizer/all.svg)](https://github.com/stefanprodan/kustomizer/releases)
 
-Kustomizer is command-line utility for applying kustomizations on Kubernetes clusters.
+Kustomizer is a command-line utility for applying kustomizations on Kubernetes clusters.
 Kustomizer garbage collector keeps track of the applied resources and prunes the Kubernetes
 objects that were previously applied on the cluster but are missing from the current revision.
 
@@ -115,3 +115,7 @@ When the revision changes, Kustomizer can reliably detect the objects that were 
 are missing from the current revision. For namespaced objects, Kustomizer runs the delete commands
 scoped to a namespace, this way an account that doesn't have a cluster role binding can prune
 objects in the namespaces it owns.
+
+## Contributing
+
+Kustomizer is Apache 2.0 licensed and accepts contributions via GitHub pull requests.
