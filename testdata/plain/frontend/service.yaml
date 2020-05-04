@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
-  namespace: dev
+  namespace: kustomizer-demo
 spec:
   type: ClusterIP
   selector:

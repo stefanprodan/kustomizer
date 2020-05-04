@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: dev
+  namespace: kustomizer-demo
 spec:
   minReadySeconds: 3
   revisionHistoryLimit: 5
@@ -22,7 +22,7 @@ spec:
       labels:
         app: backend
     spec:
-      serviceAccountName: webapp
+      serviceAccountName: demo
       containers:
       - name: backend
         image: stefanprodan/podinfo:3.2.3
