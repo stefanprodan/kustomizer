@@ -22,11 +22,12 @@ var applyCmd = &cobra.Command{
 }
 
 var (
-	group        string
-	name         string
-	revision     string
-	timeout      time.Duration
-	cfgNamespace string
+	group              string
+	name               string
+	revision           string
+	timeout            time.Duration
+	cfgNamespace       string
+	buildWithKustomize bool
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	applyCmd.Flags().StringVarP(&revision, "revision", "r", "", "revision of this kustomization")
 	applyCmd.Flags().StringVarP(&cfgNamespace, "gc-namespace", "", "default", "namespace to store the GC snapshot ConfigMap")
 	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
+	applyCmd.Flags().BoolVar(&buildWithKustomize, "use-kustomize", false, "use Kustomize binary for build operations")
 
 	rootCmd.AddCommand(applyCmd)
 }
@@ -95,9 +97,15 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	manifest := filepath.Join(base, revisor.ManifestFile())
-	err = builder.Generate(base, manifest)
-	if err != nil {
-		return err
+
+	if buildWithKustomize {
+		if err = builder.Build(base, manifest); err != nil {
+			return err
+		}
+	} else {
+		if err = builder.Generate(base, manifest); err != nil {
+			return err
+		}
 	}
 
 	applier, err := engine.NewApplier(fs, revisor, timeout)

@@ -22,3 +22,7 @@ install:
 
 install-dev:
 	CGO_ENABLED=0 go build -o /usr/local/bin ./cmd/kustomizer
+
+release:
+	git tag "v$(VERSION)"
+	git push origin "v$(VERSION)"
