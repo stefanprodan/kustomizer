@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 	"time"
@@ -28,44 +29,86 @@ func NewGarbageCollector(revisor *Revisor, timeout time.Duration) (*GarbageColle
 	}, nil
 }
 
-func (gc *GarbageCollector) Prune(dryRun bool, write func(string)) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gc.timeout+time.Second)
-	defer cancel()
-
-	namespacedKinds, err := gc.listKinds(ctx, true)
+func (gc *GarbageCollector) Run(manifestsFile string, cfgNamespace string, write func(string)) error {
+	data, err := ioutil.ReadFile(manifestsFile)
 	if err != nil {
 		return err
 	}
 
-	for _, kind := range strings.Split(namespacedKinds, ",") {
-		o, err := gc.delete(ctx, kind, gc.rv.PrevSelectors(), dryRun)
-		if err != nil {
-			return err
-		}
-		if !strings.Contains(o, "No resources found") {
-			write(o)
-		}
-	}
-
-	clusterKinds, err := gc.listKinds(ctx, false)
+	newSnapshot, err := NewSnapshot(data, gc.rv.revision)
 	if err != nil {
 		return err
 	}
 
-	for _, kind := range strings.Split(clusterKinds, ",") {
-		o, err := gc.delete(ctx, kind, gc.rv.PrevSelectors(), dryRun)
+	firstTime := false
+	cfg, err := gc.getSnapshot(cfgNamespace)
+	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
+			firstTime = true
+		} else {
+			return err
+		}
+	}
+
+	if !firstTime {
+		oldSnapshot, err := NewSnapshotFromConfigMap(cfg)
 		if err != nil {
 			return err
 		}
-		if !strings.Contains(o, "No resources found") {
-			write(o)
+
+		if newSnapshot.Revision != oldSnapshot.Revision {
+			err := gc.prune(*oldSnapshot, false, write)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	newCfg, err := newSnapshot.ToConfigMap(gc.rv.SnapshotName(), cfgNamespace)
+	if err != nil {
+		return err
+	}
+
+	msg, err := gc.applySnapshot(newCfg)
+	if err != nil {
+		return err
+	}
+
+	write(msg)
 	return nil
 }
 
-func (gc *GarbageCollector) delete(ctx context.Context, kind string, selector string, dryRun bool) (string, error) {
-	cmd := fmt.Sprintf("kubectl delete %s --all-namespaces -l %s", kind, selector)
+func (gc *GarbageCollector) prune(snapshot Snapshot, dryRun bool, write func(string)) error {
+	selector := gc.rv.PrevSelectors(snapshot.Revision)
+	for ns, kinds := range snapshot.NamespacedKinds() {
+		for _, kind := range kinds {
+			if output, err := gc.deleteByKind(kind, ns, selector, dryRun, gc.timeout); err != nil {
+				write(err.Error())
+			} else {
+				write(output)
+			}
+		}
+	}
+
+	for _, kind := range snapshot.NonNamespacedKinds() {
+		if output, err := gc.deleteByKind(kind, "", selector, dryRun, gc.timeout); err != nil {
+			write(err.Error())
+		} else {
+			write(output)
+		}
+	}
+
+	return nil
+}
+
+func (gc *GarbageCollector) deleteByKind(kind string, namespace string, selector string, dryRun bool, timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout+time.Second)
+	defer cancel()
+
+	cmd := fmt.Sprintf("kubectl delete %s -l %s", kind, selector)
+	if namespace != "" {
+		cmd = fmt.Sprintf("%s -n=%s", cmd, namespace)
+	}
 	if dryRun {
 		cmd = fmt.Sprintf("%s --dry-run=server", cmd)
 	}
@@ -78,12 +121,19 @@ func (gc *GarbageCollector) delete(ctx context.Context, kind string, selector st
 	}
 }
 
-func (gc *GarbageCollector) listKinds(ctx context.Context, namespaced bool) (string, error) {
-	exclude := `grep -vE "(events|nodes)"`
-	flat := `tr "\n" "," | sed -e 's/,$//'`
-	cmd := fmt.Sprintf(`kubectl api-resources --cached=true --namespaced=%t --verbs=delete -o name | %s | %s`,
-		namespaced, exclude, flat)
-	command := exec.CommandContext(ctx, "/bin/sh", "-c", cmd)
+func (gc *GarbageCollector) getSnapshot(cfgNamespace string) (string, error) {
+	cmd := fmt.Sprintf("kubectl -n %s get configmap %s -oyaml", cfgNamespace, gc.rv.SnapshotName())
+	command := exec.Command("/bin/sh", "-c", cmd)
+	if output, err := command.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("%s", string(output))
+	} else {
+		return strings.TrimSuffix(string(output), "\n"), nil
+	}
+}
+
+func (gc *GarbageCollector) applySnapshot(cfg string) (string, error) {
+	cmd := fmt.Sprintf("echo '%s' |kubectl apply -f-", cfg)
+	command := exec.Command("/bin/sh", "-c", cmd)
 	if output, err := command.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s", string(output))
 	} else {

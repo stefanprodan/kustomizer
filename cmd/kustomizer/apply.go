@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,19 +24,17 @@ var applyCmd = &cobra.Command{
 var (
 	group        string
 	name         string
-	nextRevision string
-	prevRevision string
-	dryRun       bool
+	revision     string
 	timeout      time.Duration
+	cfgNamespace string
 )
 
 func init() {
 	applyCmd.Flags().StringVar(&group, "group", "kustomizer", "group")
-	applyCmd.Flags().StringVarP(&name, "name", "n", "", "name")
-	applyCmd.Flags().StringVarP(&nextRevision, "revision", "r", "", "revision")
-	applyCmd.Flags().StringVarP(&prevRevision, "prev-revision", "p", "", "previous revision")
+	applyCmd.Flags().StringVarP(&name, "name", "", "", "name")
+	applyCmd.Flags().StringVarP(&revision, "revision", "r", "", "revision")
+	applyCmd.Flags().StringVarP(&cfgNamespace, "gc-namespace", "", "default", "namespace to store the GC snapshot ConfigMap")
 	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
-	applyCmd.Flags().BoolVar(&dryRun, "dry-run", false, "dry run")
 
 	rootCmd.AddCommand(applyCmd)
 }
@@ -45,7 +46,25 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	base := args[0]
 	fs := filesys.MakeFsOnDisk()
 
-	revisor, err := engine.NewRevisior(group, name, nextRevision, prevRevision)
+	tmpDir, err := ioutil.TempDir("", name)
+	if err != nil {
+		return fmt.Errorf("tmp dir error: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if !strings.HasSuffix(base, "/") {
+		base += "/"
+	}
+
+	c := fmt.Sprintf("cp -r %s* %s", base, tmpDir)
+	command := exec.Command("/bin/sh", "-c", c)
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("%s command failed", c)
+	}
+
+	base = tmpDir
+
+	revisor, err := engine.NewRevisior(group, name, revision)
 	if err != nil {
 		return err
 	}
@@ -84,7 +103,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = applier.Run(manifests, dryRun)
+	err = applier.Run(manifests, false)
 	if err != nil {
 		return err
 	}
@@ -95,15 +114,12 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	write := func(obj string) {
-		fmt.Println(obj)
+		if !strings.Contains(obj, "No resources found") {
+			fmt.Println(obj)
+		}
 	}
 
-	err = gc.Prune(dryRun, write)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(manifests)
+	err = gc.Run(manifests, cfgNamespace, write)
 	if err != nil {
 		return err
 	}

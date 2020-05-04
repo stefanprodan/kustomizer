@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kustomize/api/filesys"
 )
 
@@ -57,4 +60,59 @@ func (a *Applier) Run(filePath string, dryRun bool) error {
 	} else {
 		return nil
 	}
+}
+
+type ObjKey struct {
+	APIVersion string
+	Kind       string
+	Name       string
+	Namespace  string
+}
+
+func (a *Applier) Extract(filePath string) error {
+	data, err := a.fs.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	resources := map[ObjKey]*unstructured.Unstructured{}
+
+	reader := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 2048)
+	for {
+		var obj unstructured.Unstructured
+		err := reader.Decode(&obj)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		if obj.IsList() {
+			err := obj.EachListItem(func(item runtime.Object) error {
+				castItem := item.(*unstructured.Unstructured)
+				resources[ObjKey{
+					APIVersion: castItem.GetAPIVersion(),
+					Kind:       castItem.GetKind(),
+					Name:       castItem.GetName(),
+					Namespace:  castItem.GetNamespace(),
+				}] = castItem
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			resources[ObjKey{
+				APIVersion: obj.GetAPIVersion(),
+				Kind:       obj.GetKind(),
+				Name:       obj.GetName(),
+				Namespace:  obj.GetNamespace(),
+			}] = &obj
+		}
+	}
+
+	for key, _ := range resources {
+		fmt.Println(key)
+	}
+
+	return nil
 }

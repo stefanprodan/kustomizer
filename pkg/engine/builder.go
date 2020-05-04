@@ -24,11 +24,14 @@ func (b *Builder) Generate(base string, filePath string) error {
 		return fmt.Errorf("%s not found", kfile)
 	}
 
-	k := krusty.MakeKustomizer(b.fs, krusty.MakeDefaultOptions())
+	opt := krusty.MakeDefaultOptions()
+	opt.DoPrune = true
+	k := krusty.MakeKustomizer(b.fs, opt)
 	m, err := k.Run(base)
 	if err != nil {
 		return err
 	}
+
 
 	resources, err := m.AsYaml()
 	if err != nil {
