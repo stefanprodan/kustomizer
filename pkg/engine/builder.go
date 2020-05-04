@@ -32,7 +32,6 @@ func (b *Builder) Generate(base string, filePath string) error {
 		return err
 	}
 
-
 	resources, err := m.AsYaml()
 	if err != nil {
 		return err
