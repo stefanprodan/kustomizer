@@ -15,7 +15,7 @@ Download the Kustomizer binary from the
 or run [this script](install/README.md):
 
 ```bash
-curl -s https://raw.githubusercontent.com/stefanprodan/kustomizer/master/install/kustomizer.sh | sudo bash
+curl -s https://kustomizer.dev/install/kustomizer.sh | sudo bash
 ```
 
 ## Usage
@@ -92,3 +92,26 @@ serviceaccount "demo" deleted
 namespace "kustomizer-demo" deleted
 configmap "demo-snapshot" deleted
 ```
+
+## Motivation
+
+If you got so far you may wander how is Kustomizer different to running:
+
+```bash
+kustomize build . | kubectl apply -f- --prune -l app=my-app
+```
+
+The pruning feature in kubectl while still experimental has many downsides, most notable is that pruning
+requires an account that can query Kubernetes API for non-namespaced objects,
+this means you can't run prune under a user with restricted access to cluster wide objects.
+Another downside is the fact that pruning can delete non-namespaced objects outside of the apply scope.
+If you want to prune custom resources, then you need to pass the group/version/kind to prune-whitelist
+and maintain a list per kustomization. 
+
+Kustomizer takes the supplied name and revision, and using Kustomize transformers, it labels all
+the Kubernetes objects before applying them on the cluster. 
+The name, revision and objects metadata are persisted on the cluster in a ConfigMap.
+When the revision changes, Kustomizer can reliably detect the objects that were previously applied but 
+are missing from the current revision. For namespaced objects, Kustomizer runs the delete commands
+scoped to a namespace, this way an account that doesn't have a cluster role binding can prune
+objects in the namespaces it owns.
