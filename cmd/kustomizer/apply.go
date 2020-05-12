@@ -108,7 +108,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	applier, err := engine.NewApplier(fs, revisor, timeout)
+	applier, err := engine.NewApplier(fs, timeout)
 	if err != nil {
 		return err
 	}

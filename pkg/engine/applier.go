@@ -13,22 +13,16 @@ import (
 )
 
 type Applier struct {
-	rv      *Revisor
 	fs      filesys.FileSystem
 	timeout time.Duration
 }
 
-func NewApplier(fs filesys.FileSystem, revisor *Revisor, timeout time.Duration) (*Applier, error) {
-	if revisor == nil {
-		return nil, fmt.Errorf("revisor is nil")
-	}
-
+func NewApplier(fs filesys.FileSystem, timeout time.Duration) (*Applier, error) {
 	if _, err := exec.LookPath("kubectl"); err != nil {
 		return nil, fmt.Errorf("kubectl not found")
 	}
 
 	return &Applier{
-		rv:      revisor,
 		fs:      fs,
 		timeout: timeout,
 	}, nil
