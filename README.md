@@ -116,7 +116,7 @@ jobs:
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Kustomizer
-        run: curl -s https://kustomizer.dev/install/kustomizer.sh | sudo bash
+        uses: stefanprodan/kustomizer/action@master
       - name: Apply changes
         run: kustomizer apply testdata/plain/ --name=demo --revision=${GITHUB_SHA}
 ```
