@@ -93,6 +93,36 @@ namespace "kustomizer-demo" deleted
 configmap "demo-snapshot" deleted
 ```
 
+## CIOps
+
+You can use Kustomizer for deploying to Kubernetes from CI. 
+
+Here is an example with GitHub Actions:
+
+```yaml
+name: deploy
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  kustomizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: azure/setup-kubectl@v1
+      - uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Kustomizer
+        run: curl -s https://kustomizer.dev/install/kustomizer.sh | sudo bash
+      - name: Apply changes
+        run: kustomizer apply testdata/plain/ --name=demo --revision=${GITHUB_SHA}
+```
+
+For running kustomizations in a **GitOps** manner, take a look at [kustomize-controller](https://github.com/fluxcd/kustomize-controller).
+
 ## Motivation
 
 If you got so far you may wander how is Kustomizer different to running:
