@@ -1,4 +1,5 @@
-#!/bin/sh -l
+#!/bin/bash
+set -e
 
 curl -s https://api.github.com/repos/stefanprodan/kustomizer/releases/latest |\
   grep browser_download |\
