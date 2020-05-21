@@ -1,0 +1,9 @@
+name: 'kustomizer'
+description: 'A GitHub Action to run kustomizer commands'
+author: 'Stefan Prodan'
+branding:
+  icon: 'command'
+  color: 'blue'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
