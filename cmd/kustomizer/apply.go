@@ -28,6 +28,7 @@ var (
 	timeout            time.Duration
 	cfgNamespace       string
 	buildWithKustomize bool
+	dryRun             bool
 )
 
 func init() {
@@ -37,6 +38,7 @@ func init() {
 	applyCmd.Flags().StringVarP(&cfgNamespace, "gc-namespace", "", "default", "namespace to store the GC snapshot ConfigMap")
 	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
 	applyCmd.Flags().BoolVar(&buildWithKustomize, "use-kustomize", false, "use Kustomize binary for build operations")
+	applyCmd.Flags().BoolVar(&dryRun, "dry-run", false, "dry-run apply")
 
 	rootCmd.AddCommand(applyCmd)
 }
@@ -113,7 +115,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = applier.Run(manifest, false)
+	err = applier.Run(manifest, dryRun)
 	if err != nil {
 		return err
 	}
