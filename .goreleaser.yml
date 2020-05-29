@@ -1,5 +1,7 @@
 builds:
   - main: ./cmd/kustomizer
+    ldflags:
+      - -s -w -X main.VERSION={{ .Version }}
     binary: kustomizer
     goos:
       - darwin
@@ -11,4 +13,4 @@ builds:
 archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - none*
+      - LICENSE
