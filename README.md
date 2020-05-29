@@ -18,6 +18,12 @@ or run [this script](install/README.md):
 curl -s https://kustomizer.dev/install/kustomizer.sh | sudo bash
 ```
 
+If you want to use kustomizer as a kubectl plugin, rename the binary to `kubectl-kustomizer`:
+
+```bash
+mv /usr/local/bin/kustomizer /usr/local/bin/kubectl-kustomizer
+```
+
 ## Usage
 
 Apply a kustomization by pointing Kustomizer to a local dir that contains Kubernetes manifests:
