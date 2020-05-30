@@ -131,48 +131,29 @@ func (gc *GarbageCollector) deleteByKind(kind string, namespace string, selector
 	ctx, cancel := context.WithTimeout(context.Background(), timeout+time.Second)
 	defer cancel()
 
-	cmd := fmt.Sprintf("kubectl delete %s -l %s", kind, selector)
+	args := []string{"delete", kind, "-l", selector}
+
 	if namespace != "" {
-		cmd = fmt.Sprintf("%s -n=%s", cmd, namespace)
+		args = append(args, "-n", namespace)
 	}
 	if dryRun {
-		cmd = fmt.Sprintf("%s --dry-run=server", cmd)
+		args = append(args, "--dry-run", "server")
 	}
 
-	command := exec.CommandContext(ctx, "/bin/sh", "-c", cmd)
-	if output, err := command.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("%s", string(output))
-	} else {
-		return strings.TrimSuffix(string(output), "\n"), nil
-	}
+	return NewKubectlExecutor(nil).Get(ctx, args...)
 }
 
 func (gc *GarbageCollector) getSnapshot(cfgNamespace string) (string, error) {
-	cmd := fmt.Sprintf("kubectl -n %s get configmap %s -oyaml", cfgNamespace, gc.rv.SnapshotName())
-	command := exec.Command("/bin/sh", "-c", cmd)
-	if output, err := command.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("%s", string(output))
-	} else {
-		return strings.TrimSuffix(string(output), "\n"), nil
-	}
+	args := []string{"-n", cfgNamespace, "get", "configmap", gc.rv.SnapshotName(), "-o", "yaml"}
+	return NewKubectlExecutor(nil).Get(context.TODO(), args...)
 }
 
 func (gc *GarbageCollector) applySnapshot(cfg string) (string, error) {
-	cmd := fmt.Sprintf("echo '%s' |kubectl apply -f-", cfg)
-	command := exec.Command("/bin/sh", "-c", cmd)
-	if output, err := command.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("%s", string(output))
-	} else {
-		return strings.TrimSuffix(string(output), "\n"), nil
-	}
+	args := []string{"apply", "-f", "-"}
+	return NewKubectlExecutor(nil).Pipe(context.TODO(), cfg, args...)
 }
 
 func (gc *GarbageCollector) deleteSnapshot(cfgNamespace string) (string, error) {
-	cmd := fmt.Sprintf("kubectl -n %s delete configmap %s", cfgNamespace, gc.rv.SnapshotName())
-	command := exec.Command("/bin/sh", "-c", cmd)
-	if output, err := command.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("%s", string(output))
-	} else {
-		return strings.TrimSuffix(string(output), "\n"), nil
-	}
+	args := []string{"-n", cfgNamespace, "delete", "configmap", gc.rv.SnapshotName()}
+	return NewKubectlExecutor(nil).Get(context.TODO(), args...)
 }

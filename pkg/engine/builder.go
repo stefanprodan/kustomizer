@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+
 	"sigs.k8s.io/kustomize/api/filesys"
 	"sigs.k8s.io/kustomize/api/krusty"
 )
@@ -51,6 +53,8 @@ func (b *Builder) Build(base string, filePath string) error {
 
 	command := fmt.Sprintf("kustomize build %s > %s", base, filePath)
 	c := exec.Command("/bin/sh", "-c", command)
-
+	if runtime.GOOS == "windows" {
+		c = exec.Command("cmd", "/c", command)
+	}
 	return c.Run()
 }
