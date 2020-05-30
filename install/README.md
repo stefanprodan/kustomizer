@@ -1,6 +1,6 @@
 # Kustomizer Installation
 
-Binaries for macOS and Linux AMD64 are available for download on the 
+Binaries for macOS, Linux and Windows AMD64 are available for download on the 
 [release page](https://github.com/stefanprodan/kustomizer/releases).
 
 To install the latest release run:
