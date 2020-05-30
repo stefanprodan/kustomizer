@@ -29,3 +29,15 @@ install-plugin:
 release:
 	git tag "v$(VERSION)"
 	git push origin "v$(VERSION)"
+
+.PHONY: release-docs
+release-docs:
+	git checkout master && git pull; \
+	README=$$(cat README.md); \
+	git checkout gh-pages && git pull; \
+	echo "$$README" > README.md; \
+	git add -A; \
+	git commit -m "update docs"; \
+	git push origin gh-pages; \
+	git checkout master
+
