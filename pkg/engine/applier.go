@@ -48,26 +48,22 @@ func (a *Applier) Run(manifestPath string, dryRun bool) error {
 	defer cancel()
 
 	if crds != "" {
-		command := fmt.Sprintf("kubectl apply -f %s --timeout=%s", crds, a.timeout.String())
+		args := []string{"apply", "-f", crds, "--timeout", a.timeout.String()}
 		if dryRun {
-			command = fmt.Sprintf("%s --dry-run=client", command)
+			args = append(args, "--dry-run", "client")
 		}
 
-		if err := a.exec(ctx, command); err != nil {
+		if err := NewKubectlExecutor(nil).Exec(ctx, args...); err != nil {
 			return err
 		}
 	}
 
-	command := fmt.Sprintf("kubectl apply -f %s --timeout=%s", manifestPath, a.timeout.String())
+	args := []string{"apply", "-f", manifestPath, "--timeout", a.timeout.String()}
 	if dryRun {
-		command = fmt.Sprintf("%s --dry-run=client", command)
+		args = append(args, "--dry-run", "client")
 	}
 
-	if err := a.exec(ctx, command); err != nil {
-		return err
-	} else {
-		return nil
-	}
+	return NewKubectlExecutor(nil).Exec(ctx, args...)
 }
 
 func (a *Applier) ExtractCRDs(manifestPath string) (string, error) {
@@ -121,17 +117,4 @@ func (a *Applier) ExtractCRDs(manifestPath string) (string, error) {
 	}
 
 	return crdsFile, nil
-}
-
-func (a *Applier) exec(ctx context.Context, command string) error {
-	var stdoutBuf, stderrBuf bytes.Buffer
-	c := exec.CommandContext(ctx, "/bin/sh", "-c", command)
-	c.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
-	c.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
-
-	if err := c.Run(); err != nil {
-		return err
-	} else {
-		return nil
-	}
 }
