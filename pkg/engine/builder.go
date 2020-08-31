@@ -6,11 +6,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
+	"go.mozilla.org/sops/v3/aes"
+	"go.mozilla.org/sops/v3/cmd/sops/common"
+	"go.mozilla.org/sops/v3/cmd/sops/formats"
 	"sigs.k8s.io/kustomize/api/filesys"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/resource"
+	"sigs.k8s.io/yaml"
 )
 
 type Builder struct {
@@ -72,16 +75,37 @@ func (b *Builder) decryptSOPS(res *resource.Resource) (*resource.Resource, error
 	}
 
 	if bytes.Contains(out, []byte("sops:")) && bytes.Contains(out, []byte("mac: ENC[")) {
-		cmd := fmt.Sprintf("echo \"%s\" | sops --input-type yaml --output-type json -d --ignore-mac /dev/stdin", string(out))
-		command := exec.Command("/bin/sh", "-c", cmd)
-		outDec, err := command.CombinedOutput()
+		store := common.StoreForFormat(formats.Yaml)
+
+		// Load SOPS file and access the data key
+		tree, err := store.LoadEncryptedFile(out)
 		if err != nil {
-			return nil, fmt.Errorf("sops error: %s %w", strings.TrimSuffix(string(outDec), "\n"), err)
+			return nil, fmt.Errorf("LoadEncryptedFile: %w", err)
+		}
+		key, err := tree.Metadata.GetDataKey()
+		if err != nil {
+			return nil, fmt.Errorf("GetDataKey: %w", err)
 		}
 
-		err = res.UnmarshalJSON(outDec)
+		// Decrypt the tree
+		cipher := aes.NewCipher()
+		if _, err := tree.Decrypt(key, cipher); err != nil {
+			return nil, fmt.Errorf("Decrypt: %w", err)
+		}
+
+		data, err := store.EmitPlainFile(tree.Branches)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("EmitPlainFile: %w", err)
+		}
+
+		jsonData, err := yaml.YAMLToJSON(data)
+		if err != nil {
+			return nil, fmt.Errorf("YAMLToJSON: %w", err)
+		}
+
+		err = res.UnmarshalJSON(jsonData)
+		if err != nil {
+			return nil, fmt.Errorf("UnmarshalJSON: %w", err)
 		}
 		return res, nil
 	}
