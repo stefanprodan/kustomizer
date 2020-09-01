@@ -33,7 +33,7 @@ func (b *Builder) Generate(base string, filePath string) error {
 	}
 
 	opt := krusty.MakeDefaultOptions()
-	opt.DoPrune = true
+	opt.DoLegacyResourceSort = true
 	k := krusty.MakeKustomizer(b.fs, opt)
 	m, err := k.Run(base)
 	if err != nil {
