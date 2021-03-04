@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"sigs.k8s.io/kustomize/api/filesys"
-	"sigs.k8s.io/kustomize/api/k8sdeps/kunstruct"
 	"sigs.k8s.io/kustomize/api/konfig"
+	"sigs.k8s.io/kustomize/api/provider"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/yaml"
 )
@@ -95,7 +95,7 @@ func (g *Generator) create(base string) error {
 
 func (g *Generator) scan(base string, recursive bool) ([]string, error) {
 	var paths []string
-	uf := kunstruct.NewKunstructuredFactoryImpl()
+	uf := provider.NewDepProvider(false).GetKunstructuredFactory()
 	err := g.fs.Walk(base, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
