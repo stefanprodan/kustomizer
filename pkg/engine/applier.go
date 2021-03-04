@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -21,16 +20,14 @@ import (
 type Applier struct {
 	fs      filesys.FileSystem
 	timeout time.Duration
+	kubectl KubectlExecutor
 }
 
-func NewApplier(fs filesys.FileSystem, timeout time.Duration) (*Applier, error) {
-	if _, err := exec.LookPath("kubectl"); err != nil {
-		return nil, fmt.Errorf("kubectl not found")
-	}
-
+func NewApplier(fs filesys.FileSystem, timeout time.Duration, ke KubectlExecutor) (*Applier, error) {
 	return &Applier{
 		fs:      fs,
 		timeout: timeout,
+		kubectl: ke,
 	}, nil
 }
 
@@ -53,7 +50,7 @@ func (a *Applier) Run(manifestPath string, dryRun bool) error {
 			args = append(args, "--dry-run", "client")
 		}
 
-		if err := NewKubectlExecutor(nil).Exec(ctx, args...); err != nil {
+		if err := a.kubectl.Exec(ctx, args...); err != nil {
 			return err
 		}
 	}
@@ -63,7 +60,7 @@ func (a *Applier) Run(manifestPath string, dryRun bool) error {
 		args = append(args, "--dry-run", "client")
 	}
 
-	return NewKubectlExecutor(nil).Exec(ctx, args...)
+	return a.kubectl.Exec(ctx, args...)
 }
 
 func (a *Applier) ExtractCRDs(manifestPath string) (string, error) {

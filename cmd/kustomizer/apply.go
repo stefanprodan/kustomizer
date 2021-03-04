@@ -110,7 +110,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	applier, err := engine.NewApplier(fs, timeout)
+	applier, err := engine.NewApplier(fs, timeout, engine.NewKubectlExecutor(kubectl, nil))
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func applyCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	gc, err := engine.NewGarbageCollector(revisor, timeout)
+	gc, err := engine.NewGarbageCollector(revisor, timeout, engine.NewKubectlExecutor(kubectl, nil))
 	if err != nil {
 		return err
 	}

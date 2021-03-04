@@ -35,7 +35,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	gc, err := engine.NewGarbageCollector(revisor, deleteTimeout)
+	gc, err := engine.NewGarbageCollector(revisor, deleteTimeout, engine.NewKubectlExecutor(kubectl, nil))
 	if err != nil {
 		return err
 	}

@@ -10,19 +10,21 @@ import (
 
 // KubectlExecutor an executor that shells out to run commands
 type KubectlExecutor struct {
+	kubectl string
 	envVars []string
 }
 
 // NewKubectlExecutor creates a new executor that runs kubectl commands
-func NewKubectlExecutor(envVars []string) KubectlExecutor {
+func NewKubectlExecutor(kubectl string, envVars []string) KubectlExecutor {
 	return KubectlExecutor{
 		envVars: envVars,
+		kubectl: kubectl,
 	}
 }
 
 // Exec execute the kubectl command with the specified args
 func (e KubectlExecutor) Exec(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := e.buildCmd(ctx, args)
 	if len(e.envVars) > 0 {
 		cmd.Env = e.envVars
 	}
@@ -33,7 +35,7 @@ func (e KubectlExecutor) Exec(ctx context.Context, args ...string) error {
 
 // Get execute the kubectl command with the specified args and returns the output as string
 func (e KubectlExecutor) Get(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := e.buildCmd(ctx, args)
 	if len(e.envVars) > 0 {
 		cmd.Env = e.envVars
 	}
@@ -46,7 +48,7 @@ func (e KubectlExecutor) Get(ctx context.Context, args ...string) (string, error
 
 // Pipe execute the kubectl command by piping the yaml arg
 func (e KubectlExecutor) Pipe(ctx context.Context, yaml string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := e.buildCmd(ctx, args)
 	if len(e.envVars) > 0 {
 		cmd.Env = e.envVars
 	}
@@ -56,4 +58,9 @@ func (e KubectlExecutor) Pipe(ctx context.Context, yaml string, args ...string) 
 	} else {
 		return strings.TrimSuffix(string(output), "\n"), nil
 	}
+}
+
+func (e KubectlExecutor) buildCmd(ctx context.Context, args []string) *exec.Cmd {
+	s := append(strings.Fields(e.kubectl), args...)
+	return exec.CommandContext(ctx, s[0], s[1:]...)
 }
