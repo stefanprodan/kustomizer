@@ -12,9 +12,10 @@ import (
 type GarbageCollector struct {
 	rv      *Revisor
 	timeout time.Duration
+	kubectl KubectlExecutor
 }
 
-func NewGarbageCollector(revisor *Revisor, timeout time.Duration) (*GarbageCollector, error) {
+func NewGarbageCollector(revisor *Revisor, timeout time.Duration, ke KubectlExecutor) (*GarbageCollector, error) {
 	if revisor == nil {
 		return nil, fmt.Errorf("revisor is nil")
 	}
@@ -26,6 +27,7 @@ func NewGarbageCollector(revisor *Revisor, timeout time.Duration) (*GarbageColle
 	return &GarbageCollector{
 		rv:      revisor,
 		timeout: timeout,
+		kubectl: ke,
 	}, nil
 }
 
@@ -140,20 +142,20 @@ func (gc *GarbageCollector) deleteByKind(kind string, namespace string, selector
 		args = append(args, "--dry-run", "server")
 	}
 
-	return NewKubectlExecutor(nil).Get(ctx, args...)
+	return gc.kubectl.Get(ctx, args...)
 }
 
 func (gc *GarbageCollector) getSnapshot(cfgNamespace string) (string, error) {
 	args := []string{"-n", cfgNamespace, "get", "configmap", gc.rv.SnapshotName(), "-o", "yaml"}
-	return NewKubectlExecutor(nil).Get(context.TODO(), args...)
+	return gc.kubectl.Get(context.TODO(), args...)
 }
 
 func (gc *GarbageCollector) applySnapshot(cfg string) (string, error) {
 	args := []string{"apply", "-f", "-"}
-	return NewKubectlExecutor(nil).Pipe(context.TODO(), cfg, args...)
+	return gc.kubectl.Pipe(context.TODO(), cfg, args...)
 }
 
 func (gc *GarbageCollector) deleteSnapshot(cfgNamespace string) (string, error) {
 	args := []string{"-n", cfgNamespace, "delete", "configmap", gc.rv.SnapshotName()}
-	return NewKubectlExecutor(nil).Get(context.TODO(), args...)
+	return gc.kubectl.Get(context.TODO(), args...)
 }

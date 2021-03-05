@@ -17,6 +17,14 @@ var rootCmd = &cobra.Command{
 	Short:         "A command line utility for generating, building and applying kustomizations",
 }
 
+var (
+	kubectl string
+)
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&kubectl, "kubectl", "kubectl", "Command to run kubectl")
+}
+
 func main() {
 	log.SetFlags(0)
 	if err := rootCmd.Execute(); err != nil {
