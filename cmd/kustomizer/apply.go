@@ -1,139 +1,141 @@
+/*
+Copyright 2021 Stefan Prodan
+Copyright 2021 The Flux authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
+	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/kustomize/api/filesys"
-
-	"github.com/stefanprodan/kustomizer/pkg/engine"
+	"github.com/stefanprodan/kustomizer/pkg/resmgr"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var applyCmd = &cobra.Command{
-	Use:   "apply [path]",
-	Short: "Apply kustomization and prune previous applied Kubernetes objects",
-	RunE:  applyCmdRun,
+	Use:   "apply",
+	Short: "Apply Kubernetes manifests and Kustomize overlays using server-side apply.",
+	RunE:  runApplyCmd,
 }
 
-var (
-	group              string
-	name               string
-	revision           string
-	timeout            time.Duration
-	cfgNamespace       string
-	buildWithKustomize bool
-	dryRun             bool
-)
+type applyFlags struct {
+	filename  []string
+	wait      bool
+	force     bool
+	kustomize string
+	output    string
+}
+
+var applyArgs applyFlags
 
 func init() {
-	applyCmd.Flags().StringVar(&group, "group", "kustomizer", "group")
-	applyCmd.Flags().StringVarP(&name, "name", "", "", "name of this kustomization")
-	applyCmd.Flags().StringVarP(&revision, "revision", "r", "", "revision of this kustomization")
-	applyCmd.Flags().StringVarP(&cfgNamespace, "gc-namespace", "", "default", "namespace to store the GC snapshot ConfigMap")
-	applyCmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for this operation")
-	applyCmd.Flags().BoolVar(&buildWithKustomize, "use-kustomize", false, "use Kustomize binary for build operations")
-	applyCmd.Flags().BoolVar(&dryRun, "dry-run", false, "dry-run apply")
+	applyCmd.Flags().StringSliceVarP(&applyArgs.filename, "filename", "f", nil, "path to Kubernetes manifest(s)")
+	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
+	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "wait for the applied Kubernetes objects to become ready")
+	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "recreate objects that contain immutable fields changes")
+	applyCmd.Flags().StringVarP(&applyArgs.output, "output", "o", "", "output can be yaml or json")
 
 	rootCmd.AddCommand(applyCmd)
 }
 
-func applyCmdRun(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("path is required")
-	}
-	base := args[0]
-	fs := filesys.MakeFsOnDisk()
-
-	tmpDir, err := ioutil.TempDir("", name)
-	if err != nil {
-		return fmt.Errorf("tmp dir error: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	if !strings.HasSuffix(base, "/") {
-		base += "/"
-	}
-
-	c := fmt.Sprintf("cp -r %s* %s", base, tmpDir)
-	command := exec.Command("/bin/sh", "-c", c)
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("%s command failed", c)
-	}
-
-	base = tmpDir
-
-	revisor, err := engine.NewRevisior(group, name, revision)
+func runApplyCmd(cmd *cobra.Command, args []string) error {
+	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "flagger-cli")
 	if err != nil {
 		return err
 	}
 
-	transformer, err := engine.NewTransformer(fs, revisor)
-	if err != nil {
-		return err
-	}
+	objects := make([]*unstructured.Unstructured, 0)
 
-	err = transformer.Generate(base)
-	if err != nil {
-		return err
-	}
-
-	generator, err := engine.NewGenerator(fs, revisor)
-	if err != nil {
-		return err
-	}
-
-	err = generator.Generate(base)
-	if err != nil {
-		return err
-	}
-
-	builder, err := engine.NewBuilder(fs)
-	if err != nil {
-		return err
-	}
-
-	manifest := filepath.Join(base, revisor.ManifestFile())
-
-	if buildWithKustomize {
-		if err = builder.Build(base, manifest); err != nil {
+	if applyArgs.kustomize != "" {
+		data, err := buildKustomization(applyArgs.kustomize)
+		if err != nil {
 			return err
 		}
+
+		objs, err := resMgr.ReadAll(bytes.NewReader(data))
+		if err != nil {
+			return fmt.Errorf("%s: %w", applyArgs.kustomize, err)
+		}
+		objects = append(objects, objs...)
 	} else {
-		if err = builder.Generate(base, manifest); err != nil {
+		manifests, err := scan(applyArgs.filename)
+		if err != nil {
 			return err
 		}
-	}
+		for _, manifest := range manifests {
+			ms, err := os.Open(manifest)
+			if err != nil {
+				return err
+			}
 
-	applier, err := engine.NewApplier(fs, timeout, engine.NewKubectlExecutor(kubectl, nil))
-	if err != nil {
-		return err
+			objs, err := resMgr.ReadAll(bufio.NewReader(ms))
+			ms.Close()
+			if err != nil {
+				return fmt.Errorf("%s: %w", manifest, err)
+			}
+			objects = append(objects, objs...)
+		}
 	}
+	sort.Sort(resmgr.ApplyOrder(objects))
 
-	err = applier.Run(manifest, dryRun)
-	if err != nil {
-		return err
-	}
-
-	gc, err := engine.NewGarbageCollector(revisor, timeout, engine.NewKubectlExecutor(kubectl, nil))
-	if err != nil {
-		return err
-	}
-
-	write := func(obj string) {
-		if !strings.Contains(obj, "No resources found") {
-			fmt.Println(obj)
+	if applyArgs.output != "" {
+		switch applyArgs.output {
+		case "yaml":
+			yml, err := resMgr.ToYAML(objects)
+			if err != nil {
+				return err
+			}
+			fmt.Println(yml)
+			return nil
+		case "json":
+			json, err := resMgr.ToJSON(objects)
+			if err != nil {
+				return err
+			}
+			fmt.Println(json)
+			return nil
+		default:
+			return fmt.Errorf("unsupported output, can be yaml or json")
 		}
 	}
 
-	err = gc.Run(manifest, cfgNamespace, write)
-	if err != nil {
-		return err
+	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
+	defer cancel()
+
+	for _, object := range objects {
+		change, err := resMgr.Reconcile(ctx, object, applyArgs.force)
+		if err != nil {
+			return err
+		}
+		fmt.Println(change.String())
+	}
+
+	if applyArgs.wait {
+		fmt.Println("waiting for resources to become ready...")
+		err = resMgr.Wait(objects, 2*time.Second, rootArgs.timeout)
+		if err != nil {
+			return err
+		}
+		fmt.Println("all resources are ready")
 	}
 
 	return nil

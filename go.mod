@@ -1,13 +1,16 @@
 module github.com/stefanprodan/kustomizer
 
-go 1.14
+go 1.16
 
 require (
-	github.com/spf13/cobra v1.0.0
-	go.mozilla.org/sops/v3 v3.6.0
-	k8s.io/api v0.19.0
-	k8s.io/apimachinery v0.19.0
-	k8s.io/client-go v0.19.0 // indirect
-	sigs.k8s.io/kustomize/api v0.6.0
+	github.com/spf13/cobra v1.1.3
+	k8s.io/api v0.21.3
+	k8s.io/apiextensions-apiserver v0.21.3
+	k8s.io/apimachinery v0.21.3
+	k8s.io/client-go v0.21.3
+	k8s.io/klog/v2 v2.9.0
+	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
+	sigs.k8s.io/controller-runtime v0.9.6
+	sigs.k8s.io/kustomize/api v0.9.0
 	sigs.k8s.io/yaml v1.2.0
 )
