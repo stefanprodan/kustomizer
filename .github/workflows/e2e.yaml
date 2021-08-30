@@ -42,7 +42,7 @@ jobs:
         run: |
           ./bin/kustomizer apply -f testdata/plain/ --wait
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
-          /bin/kustomizer delete -f testdata/plain/ --wait
+          ./bin/kustomizer delete -f testdata/plain/ --wait
           kubectl get ns kustomizer-demo 2>&1 | grep NotFound
       - name: Debug failure
         if: failure()

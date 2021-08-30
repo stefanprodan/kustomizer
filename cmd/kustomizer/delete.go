@@ -73,6 +73,9 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		}
 		objects = append(objects, objs...)
 	} else {
+		if len(deleteArgs.filename) == 0 {
+			return fmt.Errorf("-f or -k is required")
+		}
 		manifests, err := scan(deleteArgs.filename)
 		if err != nil {
 			return err

@@ -28,7 +28,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var VERSION = "0.0.0-dev.0"
+var VERSION = "1.0.0-dev.0"
 
 var rootCmd = &cobra.Command{
 	Use:           "kustomizer",

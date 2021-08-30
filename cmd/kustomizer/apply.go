@@ -77,6 +77,10 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		}
 		objects = append(objects, objs...)
 	} else {
+		if len(applyArgs.filename) == 0 {
+			return fmt.Errorf("-f or -k is required")
+		}
+
 		manifests, err := scan(applyArgs.filename)
 		if err != nil {
 			return err
