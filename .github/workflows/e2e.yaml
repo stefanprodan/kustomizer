@@ -2,9 +2,9 @@ name: e2e
 
 on:
   pull_request:
+    branches: [main]
   push:
-    branches:
-      - master
+    branches: [main]
 
 jobs:
   kind:
@@ -22,11 +22,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14.x
+          go-version: 1.16.x
       - name: Setup Kubernetes
         uses: engineerd/setup-kind@v0.5.0
-      - name: Setup Kustomize
-        uses: ./.github/actions/kustomize
+        with:
+          version: v0.11.1
+          image: kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6
       - name: Run test
         run: make test
       - name: Check if working tree is dirty
@@ -36,15 +37,13 @@ jobs:
             exit 1
           fi
       - name: Build
-        run: sudo go build -o ./bin/kustomizer ./cmd/kustomizer
+        run: make build
       - name: Smoke tests
         run: |
-          ./bin/kustomizer apply testdata/plain/ --name=test --revision=1.0.0
-           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
-          rm -rf testdata/plain/frontend
-          ./bin/kustomizer apply testdata/plain/ --name=test --revision=1.1.0
-          kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
-          ./bin/kustomizer delete --name=test
+          ./bin/kustomizer apply -f testdata/plain/ --wait
+          kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
+          /bin/kustomizer delete -f testdata/plain/ --wait
+          kubectl get ns kustomizer-demo 2>&1 | grep NotFound
       - name: Debug failure
         if: failure()
         run: |

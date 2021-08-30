@@ -20,7 +20,6 @@ brews:
   - tap:
       owner: stefanprodan
       name: kustomizer
-
     folder: Formula
     homepage: "https://kustomizer.dev/"
     description: "Kustomize build, apply, prune command-line utility."

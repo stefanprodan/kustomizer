@@ -1,9 +1,43 @@
-name: 'kustomizer'
-description: 'A GitHub Action to run kustomizer commands'
-author: 'Stefan Prodan'
+name: Setup Kustomizer CLI
+description: A GitHub Action for running kustomizer commands
+author: Stefan Prodan
 branding:
-  icon: 'command'
-  color: 'blue'
+  color: blue
+  icon: command
+inputs:
+  version:
+    description: "Kustomizer version e.g. 0.8.0 (defaults to latest stable release)"
+    required: false
+  arch:
+    description: "arch can be amd64, arm64 or arm"
+    required: true
+    default: "amd64"
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
+  using: composite
+  steps:
+    - name: "Download Kustomizer binary to tmp"
+      shell: bash
+      run: |
+        ARCH=${{ inputs.arch }}
+        VERSION=${{ inputs.version }}
+
+        if [ -z $VERSION ]; then
+          VERSION=$(curl https://api.github.com/repos/stefanprodan/kustomizer/releases/latest -sL | grep tag_name | sed -E 's/.*"([^"]+)".*/\1/' | cut -c 2-)
+        fi
+
+        BIN_URL="https://github.com/stefanprodan/kustomizer/releases/download/v${VERSION}/flux_${VERSION}_linux_${ARCH}.tar.gz"
+        curl -sL ${BIN_URL} -o /tmp/kustomizer.tar.gz
+        mkdir -p /tmp/kustomizer
+        tar -C /tmp/kustomizer/ -zxvf /tmp/kustomizer.tar.gz
+    - name: "Add kustomizer binary to /usr/local/bin"
+      shell: bash
+      run: |
+        sudo cp /tmp/kustomizer/kustomizer /usr/local/bin
+    - name: "Cleanup tmp"
+      shell: bash
+      run: |
+        rm -rf /tmp/kustomizer/ /tmp/kustomizer.tar.gz
+    - name: "Verify correct installation of binary"
+      shell: bash
+      run: |
+        kustomizer -v
