@@ -17,10 +17,12 @@ limitations under the License.
 
 // Package resmgr contains utilities for managing Kubernetes resources.
 //
-// The Resource Manager performs the following actions:
-// - decodes raw manifests (YAML & JSON) into Kubernetes objects
+// The ResourceManager performs the following actions:
+// - orders the Kubernetes objects for apply (CRDs, Namespaces, ClusterRoles first)
 // - validates the objects with server-side dry-run apply
 // - determines if the in-cluster objects are in drift based on the dry-run result
 // - reconciles the objects on the cluster with server-side apply
 // - waits for the objects to be fully reconciled by looking up their readiness status
+// - deletes objects that are subject to garbage collection
+// - waits for the deleted objects to be terminated
 package resmgr

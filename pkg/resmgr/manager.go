@@ -19,9 +19,7 @@ package resmgr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"time"
@@ -30,9 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
@@ -40,7 +36,6 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 // ResourceManager reconciles Kubernetes resources onto the target cluster.
@@ -71,57 +66,10 @@ func NewResourceManager(kubeConfigPath, kubeContext, fieldOwner string) (*Resour
 	}, nil
 }
 
-// Read decodes a YAML or JSON document from the given reader into an unstructured Kubernetes API object.
-func (kc *ResourceManager) Read(r io.Reader) (*unstructured.Unstructured, error) {
-	reader := yamlutil.NewYAMLOrJSONDecoder(r, 2048)
-	obj := &unstructured.Unstructured{}
-	err := reader.Decode(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj, nil
-}
-
-// ReadAll decodes the YAML or JSON documents from the given reader into unstructured Kubernetes API objects.
-func (kc *ResourceManager) ReadAll(r io.Reader) ([]*unstructured.Unstructured, error) {
-	reader := yamlutil.NewYAMLOrJSONDecoder(r, 2048)
-	objects := make([]*unstructured.Unstructured, 0)
-
-	for {
-		obj := &unstructured.Unstructured{}
-		err := reader.Decode(obj)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-				break
-			}
-			return objects, err
-		}
-
-		if obj.IsList() {
-			err = obj.EachListItem(func(item apiruntime.Object) error {
-				obj := item.(*unstructured.Unstructured)
-				objects = append(objects, obj)
-				return nil
-			})
-			if err != nil {
-				return objects, err
-			}
-			continue
-		}
-
-		objects = append(objects, obj)
-	}
-
-	sort.Sort(ApplyOrder(objects))
-	return objects, nil
-}
-
-// Reconcile performs a server-side apply of the given object if the matching in-cluster object is different or if it doesn't exist.
+// Apply performs a server-side apply of the given object if the matching in-cluster object is different or if it doesn't exist.
 // Drift detection is performed by comparing the server-side dry-run result with the existing object.
 // When immutable field changes are detected, the object is recreated if 'force' is set to 'true'.
-func (kc *ResourceManager) Reconcile(ctx context.Context, object *unstructured.Unstructured, force bool) (*ChangeSetEntry, error) {
+func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstructured, force bool) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
 	_ = kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
@@ -133,7 +81,7 @@ func (kc *ResourceManager) Reconcile(ctx context.Context, object *unstructured.U
 					return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
 						kc.fmt.Unstructured(dryRunObject), err)
 				}
-				return kc.Reconcile(ctx, object, force)
+				return kc.Apply(ctx, object, force)
 			}
 		}
 		return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
@@ -155,8 +103,9 @@ func (kc *ResourceManager) Reconcile(ctx context.Context, object *unstructured.U
 	return kc.changeSetEntry(appliedObject, ConfiguredAction), nil
 }
 
-// ReconcileAll performs a server-side apply of the given set of objects.
-func (kc *ResourceManager) ReconcileAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
+// ApplyAll performs a server-side dry-run of the given objects, and based on the diff result,
+// it applies the objects that are new or modified.
+func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
 	sort.Sort(ApplyOrder(objects))
 	changeSet := NewChangeSet()
 	var toApply []*unstructured.Unstructured
@@ -172,7 +121,7 @@ func (kc *ResourceManager) ReconcileAll(ctx context.Context, objects []*unstruct
 						return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
 							kc.fmt.Unstructured(dryRunObject), err)
 					}
-					return kc.ReconcileAll(ctx, objects, force)
+					return kc.ApplyAll(ctx, objects, force)
 				}
 			}
 			return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
@@ -362,36 +311,7 @@ func (kc *ResourceManager) isDeleted(ctx context.Context, object *unstructured.U
 	}
 }
 
-// ToYAML encodes the given Kubernetes API objects to a YAML multi-doc.
-func (kc *ResourceManager) ToYAML(objects []*unstructured.Unstructured) (string, error) {
-	var builder strings.Builder
-	for _, obj := range objects {
-		data, err := yaml.Marshal(obj)
-		if err != nil {
-			return "", err
-		}
-		builder.Write(data)
-		builder.WriteString("---\n")
-	}
-	return builder.String(), nil
-}
-
-// ToJSON encodes the given Kubernetes API objects to a YAML multi-doc.
-func (kc *ResourceManager) ToJSON(objects []*unstructured.Unstructured) (string, error) {
-	list := struct {
-		ApiVersion string                       `json:"apiVersion,omitempty"`
-		Kind       string                       `json:"kind,omitempty"`
-		Items      []*unstructured.Unstructured `json:"items,omitempty"`
-	}{
-		ApiVersion: "v1",
-		Kind:       "List",
-		Items:      objects,
-	}
-
-	data, err := json.MarshalIndent(list, "", "    ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
+// KubeClient returns the underlying controller-runtime client.
+func (kc *ResourceManager) KubeClient() client.Client {
+	return kc.kubeClient
 }
