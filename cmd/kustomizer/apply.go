@@ -59,14 +59,14 @@ func init() {
 	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "recreate objects that contain immutable fields changes")
 	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "delete stale objects")
 	applyCmd.Flags().StringVarP(&applyArgs.output, "output", "o", "", "output can be yaml or json")
-	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "inventory name")
-	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default", "inventory namespace")
+	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "inventory configmap name")
+	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default", "inventory configmap namespace")
 
 	rootCmd.AddCommand(applyCmd)
 }
 
 func runApplyCmd(cmd *cobra.Command, args []string) error {
-	invMgr := inventory.NewInventoryManager("kustomizer")
+	invMgr := inventory.NewInventoryManager(PROJECT)
 	objects := make([]*unstructured.Unstructured, 0)
 
 	if applyArgs.kustomize != "" {
@@ -138,7 +138,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
 
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "kustomizer")
+	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
 	if err != nil {
 		return err
 	}

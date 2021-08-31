@@ -18,17 +18,11 @@ limitations under the License.
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
@@ -40,67 +34,43 @@ var deleteCmd = &cobra.Command{
 }
 
 type deleteFlags struct {
-	filename  []string
-	kustomize string
-	wait      bool
+	inventoryName      string
+	inventoryNamespace string
+	wait               bool
 }
 
 var deleteArgs deleteFlags
 
 func init() {
-	deleteCmd.Flags().StringSliceVarP(&deleteArgs.filename, "filename", "f", nil, "path to Kubernetes manifest(s)")
-	deleteCmd.Flags().StringVarP(&deleteArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
-	deleteCmd.Flags().BoolVar(&deleteArgs.wait, "wait", false, "wait for the deleted Kubernetes objects to be terminated")
+	deleteCmd.Flags().StringVarP(&deleteArgs.inventoryName, "inventory-name", "i", "", "inventory configmap name")
+	deleteCmd.Flags().StringVar(&deleteArgs.inventoryNamespace, "inventory-namespace", "default", "inventory configmap namespace")
+	deleteCmd.Flags().BoolVar(&deleteArgs.wait, "wait", true, "wait for the deleted Kubernetes objects to be terminated")
 
 	rootCmd.AddCommand(deleteCmd)
 }
 
 func deleteCmdRun(cmd *cobra.Command, args []string) error {
-	invMgr := inventory.NewInventoryManager("kustomizer")
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "flagger-cli")
+	if deleteArgs.inventoryName == "" {
+		return fmt.Errorf("--inventory-name is required")
+	}
+	if deleteArgs.inventoryNamespace == "" {
+		return fmt.Errorf("--inventory-namespace is required")
+	}
+
+	invMgr := inventory.NewInventoryManager(PROJECT)
+	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
 	if err != nil {
 		return err
 	}
 
-	objects := make([]*unstructured.Unstructured, 0)
-
-	if applyArgs.kustomize != "" {
-		data, err := buildKustomization(deleteArgs.kustomize)
-		if err != nil {
-			return err
-		}
-
-		objs, err := invMgr.ReadAll(bytes.NewReader(data))
-		if err != nil {
-			return fmt.Errorf("%s: %w", deleteArgs.kustomize, err)
-		}
-		objects = append(objects, objs...)
-	} else {
-		if len(deleteArgs.filename) == 0 {
-			return fmt.Errorf("-f or -k is required")
-		}
-		manifests, err := scan(deleteArgs.filename)
-		if err != nil {
-			return err
-		}
-		for _, manifest := range manifests {
-			ms, err := os.Open(manifest)
-			if err != nil {
-				return err
-			}
-
-			objs, err := invMgr.ReadAll(bufio.NewReader(ms))
-			ms.Close()
-			if err != nil {
-				return fmt.Errorf("%s: %w", manifest, err)
-			}
-			objects = append(objects, objs...)
-		}
-	}
-	sort.Sort(resmgr.ApplyOrder(objects))
-
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
+
+	inv, err := invMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	objects, err := inv.List()
+	if err != nil {
+		return err
+	}
 
 	changeSet, err := resMgr.DeleteAll(ctx, objects)
 	if err != nil {
@@ -109,6 +79,13 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 	for _, change := range changeSet.Entries {
 		fmt.Println(change.String())
 	}
+
+	err = invMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("ConfigMap/%s/%s deleted", deleteArgs.inventoryNamespace, deleteArgs.inventoryName))
 
 	if deleteArgs.wait {
 		fmt.Println("waiting for resources to be terminated...")

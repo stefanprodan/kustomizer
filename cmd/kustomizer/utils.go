@@ -106,10 +106,8 @@ func buildKustomization(base string) ([]byte, error) {
 	}
 
 	buildOptions := &krusty.Options{
-		LoadRestrictions:  kustypes.LoadRestrictionsNone,
-		AddManagedbyLabel: false,
-		DoPrune:           false,
-		PluginConfig:      kustypes.DisabledPluginConfig(),
+		LoadRestrictions: kustypes.LoadRestrictionsNone,
+		PluginConfig:     kustypes.DisabledPluginConfig(),
 	}
 
 	k := krusty.MakeKustomizer(buildOptions)

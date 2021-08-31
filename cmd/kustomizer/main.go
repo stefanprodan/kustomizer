@@ -30,8 +30,10 @@ import (
 
 var VERSION = "1.0.0-dev.0"
 
+const PROJECT = "kustomizer"
+
 var rootCmd = &cobra.Command{
-	Use:           "kustomizer",
+	Use:           PROJECT,
 	Version:       VERSION,
 	SilenceUsage:  true,
 	SilenceErrors: true,
