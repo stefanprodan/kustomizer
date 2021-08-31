@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,30 +38,33 @@ import (
 // InventoryManager records the Kubernetes objects that are applied on the cluster.
 type InventoryManager struct {
 	fieldOwner string
+	group      string
 }
 
 // NewInventoryManager returns an InventoryManager.
-func NewInventoryManager(fieldOwner string) *InventoryManager {
-	return &InventoryManager{fieldOwner: fieldOwner}
+func NewInventoryManager(fieldOwner, group string) (*InventoryManager, error) {
+	if fieldOwner == "" {
+		return nil, fmt.Errorf("fieldOwner is required")
+	}
+	if group == "" {
+		return nil, fmt.Errorf("group is required")
+	}
+
+	return &InventoryManager{
+		fieldOwner: fieldOwner,
+		group:      group,
+	}, nil
 }
 
-// GetStaleObjects returns the list of objects subject to pruning.
-func (im *InventoryManager) GetStaleObjects(ctx context.Context, kubeClient client.Client, inv *Inventory, name, namespace string) ([]*unstructured.Unstructured, error) {
-	objects := make([]*unstructured.Unstructured, 0)
-	exInv, err := im.Retrieve(ctx, kubeClient, name, namespace)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return objects, nil
-		}
+// Record creates an Inventory of the given objects.
+func (im *InventoryManager) Record(objects []*unstructured.Unstructured) (*Inventory, error) {
+	inventory := NewInventory()
+
+	if err := inventory.Add(objects); err != nil {
 		return nil, err
 	}
 
-	objects, err = exInv.Diff(inv)
-	if err != nil {
-		return nil, err
-	}
-
-	return objects, nil
+	return inventory, nil
 }
 
 // Store applies the Inventory object on the server.
@@ -71,6 +75,9 @@ func (im *InventoryManager) Store(ctx context.Context, kubeClient client.Client,
 	}
 
 	cm := im.newConfigMap(name, namespace)
+	cm.Annotations = map[string]string{
+		im.group + "/last-applied-time": time.Now().UTC().Format(time.RFC3339),
+	}
 	cm.Data = map[string]string{
 		"inventory": string(data),
 	}
@@ -105,6 +112,25 @@ func (im *InventoryManager) Retrieve(ctx context.Context, kubeClient client.Clie
 	return &Inventory{Entries: entries}, nil
 }
 
+// GetStaleObjects returns the list of objects subject to pruning.
+func (im *InventoryManager) GetStaleObjects(ctx context.Context, kubeClient client.Client, inv *Inventory, name, namespace string) ([]*unstructured.Unstructured, error) {
+	objects := make([]*unstructured.Unstructured, 0)
+	exInv, err := im.Retrieve(ctx, kubeClient, name, namespace)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return objects, nil
+		}
+		return nil, err
+	}
+
+	objects, err = exInv.Diff(inv)
+	if err != nil {
+		return nil, err
+	}
+
+	return objects, nil
+}
+
 // Remove deletes the Inventory object from the server.
 func (im *InventoryManager) Remove(ctx context.Context, kubeClient client.Client, name, namespace string) error {
 	cm := im.newConfigMap(name, namespace)
@@ -115,17 +141,6 @@ func (im *InventoryManager) Remove(ctx context.Context, kubeClient client.Client
 		return fmt.Errorf("failed to delete ConfigMap/%s, error: %w", cmKey, err)
 	}
 	return nil
-}
-
-// Record creates an Inventory of the given objects.
-func (im *InventoryManager) Record(objects []*unstructured.Unstructured) (*Inventory, error) {
-	inventory := NewInventory()
-
-	if err := inventory.Add(objects); err != nil {
-		return nil, err
-	}
-
-	return inventory, nil
 }
 
 // Read decodes a YAML or JSON document from the given reader into an unstructured Kubernetes API object.
@@ -217,6 +232,11 @@ func (im *InventoryManager) newConfigMap(name, namespace string) *corev1.ConfigM
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       name,
+				"app.kubernetes.io/component":  "inventory",
+				"app.kubernetes.io/created-by": im.fieldOwner,
+			},
 		},
 	}
 }
