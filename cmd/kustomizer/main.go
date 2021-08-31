@@ -52,9 +52,11 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubeconfig, "kubeconfig", "", "",
-		"absolute path to the kubeconfig file")
-	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubecontext, "context", "", "", "kubernetes context to use")
-	rootCmd.PersistentFlags().DurationVar(&rootArgs.timeout, "timeout", time.Minute, "timeout for this operation")
+		"Absolute path to the kubeconfig file.")
+	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubecontext, "context", "", "",
+		"The Kubernetes context to use.")
+	rootCmd.PersistentFlags().DurationVar(&rootArgs.timeout, "timeout", time.Minute,
+		"The length of time to wait before giving up on the current operation.")
 
 	rootCmd.DisableAutoGenTag = true
 }

@@ -50,9 +50,12 @@ type buildFlags struct {
 var buildArgs buildFlags
 
 func init() {
-	buildCmd.Flags().StringSliceVarP(&buildArgs.filename, "filename", "f", nil, "path to Kubernetes manifest(s)")
-	buildCmd.Flags().StringVarP(&buildArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
-	buildCmd.Flags().StringVarP(&buildArgs.output, "output", "o", "yaml", "output can be yaml or json")
+	buildCmd.Flags().StringSliceVarP(&buildArgs.filename, "filename", "f", nil,
+		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
+	buildCmd.Flags().StringVarP(&buildArgs.kustomize, "kustomize", "k", "",
+		"Path to a directory that contains a kustomization.yaml.")
+	buildCmd.Flags().StringVarP(&buildArgs.output, "output", "o", "yaml",
+		"Write manifests to stdout in YAML or JSON format.")
 
 	rootCmd.AddCommand(buildCmd)
 }
@@ -103,7 +106,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 	}
 
 	if len(filePaths) > 0 {
-		manifests, err := scan(filePaths)
+		manifests, err := scanForManifests(filePaths)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +129,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 	return objects, nil
 }
 
-func scan(paths []string) ([]string, error) {
+func scanForManifests(paths []string) ([]string, error) {
 	var manifests []string
 
 	for _, in := range paths {

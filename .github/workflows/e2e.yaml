@@ -38,19 +38,25 @@ jobs:
           fi
       - name: Build
         run: make build
-      - name: Apply test
+      - name: Test apply --kustomize
+        run: |
+          ./bin/kustomizer apply -i kustomizer-test -k testdata/kustomize/ --wait --prune
+          kubectl -n kustomizer-test get tests 2>&1 | grep custom-resource-test1
+      - name: Test apply --filename
         run: |
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
-          kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
-      - name: Prune test
+          kubectl -n kustomizer-test get svc frontend 2>&1 | grep frontend
+      - name: Test apply --prune
         run: |
           rm -rf testdata/plain/frontend
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
-      - name: Delete test
+      - name: Test delete --wait
         run: |
           ./bin/kustomizer delete -i kustomizer-demo --wait
           kubectl get ns kustomizer-demo 2>&1 | grep NotFound
+          ./bin/kustomizer delete -i kustomizer-test --wait
+          kubectl get crd tests.testing.kustomizer.dev 2>&1 | grep NotFound
       - name: Debug failure
         if: failure()
         run: |

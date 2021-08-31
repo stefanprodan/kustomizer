@@ -1,7 +1,0 @@
-apiVersion: testing.k8s.io/v1
-kind: Test
-metadata:
-  name: some-test
-  namespace: default
-spec:
-  type: integration

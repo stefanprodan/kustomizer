@@ -44,13 +44,16 @@ type applyFlags struct {
 var applyArgs applyFlags
 
 func init() {
-	applyCmd.Flags().StringSliceVarP(&applyArgs.filename, "filename", "f", nil, "path to Kubernetes manifest(s)")
-	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
-	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "wait for the applied Kubernetes objects to become ready")
-	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "recreate objects that contain immutable fields changes")
-	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "delete stale objects")
-	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "inventory configmap name")
-	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default", "inventory configmap namespace")
+	applyCmd.Flags().StringSliceVarP(&applyArgs.filename, "filename", "f", nil,
+		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
+	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "",
+		"Path to a directory that contains a kustomization.yaml.")
+	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "Wait for the applied Kubernetes objects to become ready.")
+	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "Recreate objects that contain immutable fields changes.")
+	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "Delete stale objects from the cluster.")
+	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
+	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default",
+		"The namespace of the inventory configmap. The namespace must exist on the target cluster.")
 
 	rootCmd.AddCommand(applyCmd)
 }

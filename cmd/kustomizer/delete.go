@@ -27,7 +27,7 @@ import (
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete the Kubernetes objects in the inventory",
+	Short: "Delete the Kubernetes objects in the inventory.",
 	RunE:  deleteCmdRun,
 }
 
@@ -40,9 +40,9 @@ type deleteFlags struct {
 var deleteArgs deleteFlags
 
 func init() {
-	deleteCmd.Flags().StringVarP(&deleteArgs.inventoryName, "inventory-name", "i", "", "inventory configmap name")
-	deleteCmd.Flags().StringVar(&deleteArgs.inventoryNamespace, "inventory-namespace", "default", "inventory configmap namespace")
-	deleteCmd.Flags().BoolVar(&deleteArgs.wait, "wait", true, "wait for the deleted Kubernetes objects to be terminated")
+	deleteCmd.Flags().StringVarP(&deleteArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
+	deleteCmd.Flags().StringVar(&deleteArgs.inventoryNamespace, "inventory-namespace", "default", "The namespace of the inventory configmap.")
+	deleteCmd.Flags().BoolVar(&deleteArgs.wait, "wait", true, "Wait for the deleted Kubernetes objects to be terminated.")
 
 	rootCmd.AddCommand(deleteCmd)
 }

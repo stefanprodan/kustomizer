@@ -1,0 +1,16 @@
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test1
+spec:
+  type: integration
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test2
+spec:
+  type: unit
+  valuesFrom: test-config
+---
