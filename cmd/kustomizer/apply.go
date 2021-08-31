@@ -27,8 +27,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
 var applyCmd = &cobra.Command{
@@ -38,11 +40,14 @@ var applyCmd = &cobra.Command{
 }
 
 type applyFlags struct {
-	filename  []string
-	wait      bool
-	force     bool
-	kustomize string
-	output    string
+	filename           []string
+	kustomize          string
+	output             string
+	inventoryName      string
+	inventoryNamespace string
+	wait               bool
+	force              bool
+	prune              bool
 }
 
 var applyArgs applyFlags
@@ -52,17 +57,16 @@ func init() {
 	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
 	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "wait for the applied Kubernetes objects to become ready")
 	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "recreate objects that contain immutable fields changes")
+	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "delete stale objects")
 	applyCmd.Flags().StringVarP(&applyArgs.output, "output", "o", "", "output can be yaml or json")
+	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "inventory name")
+	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default", "inventory namespace")
 
 	rootCmd.AddCommand(applyCmd)
 }
 
 func runApplyCmd(cmd *cobra.Command, args []string) error {
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "flagger-cli")
-	if err != nil {
-		return err
-	}
-
+	invMgr := inventory.NewInventoryManager("kustomizer")
 	objects := make([]*unstructured.Unstructured, 0)
 
 	if applyArgs.kustomize != "" {
@@ -71,7 +75,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		objs, err := resMgr.ReadAll(bytes.NewReader(data))
+		objs, err := invMgr.ReadAll(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf("%s: %w", applyArgs.kustomize, err)
 		}
@@ -91,7 +95,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			objs, err := resMgr.ReadAll(bufio.NewReader(ms))
+			objs, err := invMgr.ReadAll(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
 				return fmt.Errorf("%s: %w", manifest, err)
@@ -99,19 +103,19 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			objects = append(objects, objs...)
 		}
 	}
-	sort.Sort(resmgr.ApplyOrder(objects))
 
+	sort.Sort(resmgr.ApplyOrder(objects))
 	if applyArgs.output != "" {
 		switch applyArgs.output {
 		case "yaml":
-			yml, err := resMgr.ToYAML(objects)
+			yml, err := invMgr.ToYAML(objects)
 			if err != nil {
 				return err
 			}
 			fmt.Println(yml)
 			return nil
 		case "json":
-			json, err := resMgr.ToJSON(objects)
+			json, err := invMgr.ToJSON(objects)
 			if err != nil {
 				return err
 			}
@@ -122,23 +126,69 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if applyArgs.inventoryName == "" {
+		return fmt.Errorf("--inventory-name is required")
+	}
+	if applyArgs.inventoryNamespace == "" {
+		return fmt.Errorf("--inventory-namespace is required")
+	}
+
+	newInventory, err := invMgr.Record(objects)
+	if err != nil {
+		return fmt.Errorf("creating inventory failed, error: %w", err)
+	}
+
+	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "kustomizer")
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
 	for _, object := range objects {
-		change, err := resMgr.Reconcile(ctx, object, applyArgs.force)
+		change, err := resMgr.Apply(ctx, object, applyArgs.force)
 		if err != nil {
 			return err
 		}
 		fmt.Println(change.String())
 	}
 
+	staleObjects, err := invMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	if err != nil {
+		return fmt.Errorf("inventory query failed, error: %w", err)
+	}
+
+	err = invMgr.Store(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	if err != nil {
+		return fmt.Errorf("inventory apply failed, error: %w", err)
+	}
+
+	if applyArgs.prune && len(staleObjects) > 0 {
+		changeSet, err := resMgr.DeleteAll(ctx, staleObjects)
+		if err != nil {
+			return fmt.Errorf("prune failed, error: %w", err)
+		}
+		for _, change := range changeSet.Entries {
+			fmt.Println(change.String())
+		}
+	}
+
 	if applyArgs.wait {
 		fmt.Println("waiting for resources to become ready...")
+
 		err = resMgr.Wait(objects, 2*time.Second, rootArgs.timeout)
 		if err != nil {
 			return err
 		}
+
+		if applyArgs.prune && len(staleObjects) > 0 {
+			err = resMgr.WaitForTermination(staleObjects, 2*time.Second, rootArgs.timeout)
+			if err != nil {
+				return fmt.Errorf("wating for termination failed, error: %w", err)
+			}
+		}
+
 		fmt.Println("all resources are ready")
 	}
 

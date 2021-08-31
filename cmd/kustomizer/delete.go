@@ -27,8 +27,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
 var deleteCmd = &cobra.Command{
@@ -54,6 +56,7 @@ func init() {
 }
 
 func deleteCmdRun(cmd *cobra.Command, args []string) error {
+	invMgr := inventory.NewInventoryManager("kustomizer")
 	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, "flagger-cli")
 	if err != nil {
 		return err
@@ -67,7 +70,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		objs, err := resMgr.ReadAll(bytes.NewReader(data))
+		objs, err := invMgr.ReadAll(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf("%s: %w", deleteArgs.kustomize, err)
 		}
@@ -86,7 +89,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			objs, err := resMgr.ReadAll(bufio.NewReader(ms))
+			objs, err := invMgr.ReadAll(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
 				return fmt.Errorf("%s: %w", manifest, err)
