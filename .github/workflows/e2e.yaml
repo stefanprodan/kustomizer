@@ -38,10 +38,17 @@ jobs:
           fi
       - name: Build
         run: make build
-      - name: Smoke tests
+      - name: Apply test
         run: |
-          ./bin/kustomizer apply -f testdata/plain/ --wait
+          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
+      - name: Prune test
+        run: |
+          rm -rf testdata/plain/frontend
+          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
+          kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
+      - name: Delete test
+        run: |
           ./bin/kustomizer delete -f testdata/plain/ --wait
           kubectl get ns kustomizer-demo 2>&1 | grep NotFound
       - name: Debug failure
