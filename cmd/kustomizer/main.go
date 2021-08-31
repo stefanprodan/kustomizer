@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog/v2"
+
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
 )
 
 var VERSION = "1.0.0-dev.0"
@@ -57,11 +59,20 @@ func init() {
 	rootCmd.DisableAutoGenTag = true
 }
 
+var inventoryMgr *inventory.InventoryManager
+
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
 	configureKubeconfig()
+
+	if im, err := inventory.NewInventoryManager(PROJECT, PROJECT+".dev"); err != nil {
+		panic(err)
+	} else {
+		inventoryMgr = im
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		klog.Errorf("%v", err)
 		os.Exit(1)

@@ -29,7 +29,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
@@ -66,7 +65,6 @@ func init() {
 }
 
 func runApplyCmd(cmd *cobra.Command, args []string) error {
-	invMgr := inventory.NewInventoryManager(PROJECT)
 	objects := make([]*unstructured.Unstructured, 0)
 
 	if applyArgs.kustomize != "" {
@@ -75,7 +73,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		objs, err := invMgr.ReadAll(bytes.NewReader(data))
+		objs, err := inventoryMgr.ReadAll(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf("%s: %w", applyArgs.kustomize, err)
 		}
@@ -95,7 +93,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			objs, err := invMgr.ReadAll(bufio.NewReader(ms))
+			objs, err := inventoryMgr.ReadAll(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
 				return fmt.Errorf("%s: %w", manifest, err)
@@ -108,14 +106,14 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	if applyArgs.output != "" {
 		switch applyArgs.output {
 		case "yaml":
-			yml, err := invMgr.ToYAML(objects)
+			yml, err := inventoryMgr.ToYAML(objects)
 			if err != nil {
 				return err
 			}
 			fmt.Println(yml)
 			return nil
 		case "json":
-			json, err := invMgr.ToJSON(objects)
+			json, err := inventoryMgr.ToJSON(objects)
 			if err != nil {
 				return err
 			}
@@ -133,7 +131,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
-	newInventory, err := invMgr.Record(objects)
+	newInventory, err := inventoryMgr.Record(objects)
 	if err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
@@ -154,12 +152,12 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		fmt.Println(change.String())
 	}
 
-	staleObjects, err := invMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
 	if err != nil {
 		return fmt.Errorf("inventory query failed, error: %w", err)
 	}
 
-	err = invMgr.Store(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	err = inventoryMgr.Store(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
 	if err != nil {
 		return fmt.Errorf("inventory apply failed, error: %w", err)
 	}

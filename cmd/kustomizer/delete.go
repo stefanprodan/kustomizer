@@ -23,13 +23,12 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete Kubernetes objects previous applied",
+	Short: "Delete the Kubernetes objects in the inventory",
 	RunE:  deleteCmdRun,
 }
 
@@ -57,7 +56,6 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
-	invMgr := inventory.NewInventoryManager(PROJECT)
 	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
 	if err != nil {
 		return err
@@ -66,7 +64,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	inv, err := invMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	inv, err := inventoryMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
 	objects, err := inv.List()
 	if err != nil {
 		return err
@@ -80,7 +78,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		fmt.Println(change.String())
 	}
 
-	err = invMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	err = inventoryMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
 	if err != nil {
 		return err
 	}
