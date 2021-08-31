@@ -1,6 +1,5 @@
 /*
 Copyright 2021 Stefan Prodan
-Copyright 2021 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,16 +17,13 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/klog/v2"
-
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 var VERSION = "1.0.0-dev.0"
@@ -48,7 +44,11 @@ type rootFlags struct {
 	timeout     time.Duration
 }
 
-var rootArgs = rootFlags{}
+var (
+	rootArgs     = rootFlags{}
+	logger       = stderrLogger{stderr: os.Stderr}
+	inventoryMgr *inventory.InventoryManager
+)
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubeconfig, "kubeconfig", "", "",
@@ -59,12 +59,7 @@ func init() {
 	rootCmd.DisableAutoGenTag = true
 }
 
-var inventoryMgr *inventory.InventoryManager
-
 func main() {
-	klog.InitFlags(nil)
-	flag.Parse()
-
 	configureKubeconfig()
 
 	if im, err := inventory.NewInventoryManager(PROJECT, PROJECT+".dev"); err != nil {
@@ -74,7 +69,7 @@ func main() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		klog.Errorf("%v", err)
+		logger.Println(err)
 		os.Exit(1)
 	}
 }

@@ -1,6 +1,5 @@
 /*
 Copyright 2021 Stefan Prodan
-Copyright 2021 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,16 +17,114 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"sync"
 
-	"sigs.k8s.io/kustomize/api/filesys"
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
+
+var buildCmd = &cobra.Command{
+	Use:   "build",
+	Short: "Build a set of Kubernetes manifests or Kustomize overlays.",
+	RunE:  runBuildCmd,
+}
+
+type buildFlags struct {
+	filename  []string
+	kustomize string
+	output    string
+}
+
+var buildArgs buildFlags
+
+func init() {
+	buildCmd.Flags().StringSliceVarP(&buildArgs.filename, "filename", "f", nil, "path to Kubernetes manifest(s)")
+	buildCmd.Flags().StringVarP(&buildArgs.kustomize, "kustomize", "k", "", "process a kustomization directory (can't be used together with -f)")
+	buildCmd.Flags().StringVarP(&buildArgs.output, "output", "o", "yaml", "output can be yaml or json")
+
+	rootCmd.AddCommand(buildCmd)
+}
+
+func runBuildCmd(cmd *cobra.Command, args []string) error {
+	if buildArgs.kustomize == "" && len(buildArgs.filename) == 0 {
+		return fmt.Errorf("-f or -k is required")
+	}
+
+	objects, err := buildManifests(buildArgs.kustomize, buildArgs.filename)
+	if err != nil {
+		return err
+	}
+
+	switch buildArgs.output {
+	case "yaml":
+		yml, err := inventoryMgr.ToYAML(objects)
+		if err != nil {
+			return err
+		}
+		fmt.Println(yml)
+	case "json":
+		json, err := inventoryMgr.ToJSON(objects)
+		if err != nil {
+			return err
+		}
+		fmt.Println(json)
+	default:
+		return fmt.Errorf("unsupported output, can be yaml or json")
+	}
+
+	return nil
+}
+
+func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.Unstructured, error) {
+	objects := make([]*unstructured.Unstructured, 0)
+	if kustomizePath != "" {
+		data, err := buildKustomization(kustomizePath)
+		if err != nil {
+			return nil, err
+		}
+
+		objs, err := inventoryMgr.ReadAll(bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", kustomizePath, err)
+		}
+		objects = append(objects, objs...)
+	}
+
+	if len(filePaths) > 0 {
+		manifests, err := scan(filePaths)
+		if err != nil {
+			return nil, err
+		}
+		for _, manifest := range manifests {
+			ms, err := os.Open(manifest)
+			if err != nil {
+				return nil, err
+			}
+
+			objs, err := inventoryMgr.ReadAll(bufio.NewReader(ms))
+			ms.Close()
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", manifest, err)
+			}
+			objects = append(objects, objs...)
+		}
+	}
+
+	sort.Sort(resmgr.ApplyOrder(objects))
+	return objects, nil
+}
 
 func scan(paths []string) ([]string, error) {
 	var manifests []string

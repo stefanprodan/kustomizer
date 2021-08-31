@@ -1,6 +1,5 @@
 /*
 Copyright 2021 Stefan Prodan
-Copyright 2021 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -75,7 +74,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, change := range changeSet.Entries {
-		fmt.Println(change.String())
+		logger.Println(change.String())
 	}
 
 	err = inventoryMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
@@ -83,15 +82,15 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(fmt.Sprintf("ConfigMap/%s/%s deleted", deleteArgs.inventoryNamespace, deleteArgs.inventoryName))
+	logger.Println(fmt.Sprintf("ConfigMap/%s/%s deleted", deleteArgs.inventoryNamespace, deleteArgs.inventoryName))
 
 	if deleteArgs.wait {
-		fmt.Println("waiting for resources to be terminated...")
+		logger.Println("waiting for resources to be terminated...")
 		err = resMgr.WaitForTermination(objects, 2*time.Second, rootArgs.timeout)
 		if err != nil {
 			return err
 		}
-		fmt.Println("all resources have been deleted")
+		logger.Println("all resources have been deleted")
 	}
 
 	return nil

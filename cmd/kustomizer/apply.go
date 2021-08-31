@@ -1,6 +1,5 @@
 /*
 Copyright 2021 Stefan Prodan
-Copyright 2021 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,17 +17,11 @@ limitations under the License.
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
@@ -41,7 +34,6 @@ var applyCmd = &cobra.Command{
 type applyFlags struct {
 	filename           []string
 	kustomize          string
-	output             string
 	inventoryName      string
 	inventoryNamespace string
 	wait               bool
@@ -57,7 +49,6 @@ func init() {
 	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "wait for the applied Kubernetes objects to become ready")
 	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "recreate objects that contain immutable fields changes")
 	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "delete stale objects")
-	applyCmd.Flags().StringVarP(&applyArgs.output, "output", "o", "", "output can be yaml or json")
 	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "inventory configmap name")
 	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default", "inventory configmap namespace")
 
@@ -65,70 +56,19 @@ func init() {
 }
 
 func runApplyCmd(cmd *cobra.Command, args []string) error {
-	objects := make([]*unstructured.Unstructured, 0)
-
-	if applyArgs.kustomize != "" {
-		data, err := buildKustomization(applyArgs.kustomize)
-		if err != nil {
-			return err
-		}
-
-		objs, err := inventoryMgr.ReadAll(bytes.NewReader(data))
-		if err != nil {
-			return fmt.Errorf("%s: %w", applyArgs.kustomize, err)
-		}
-		objects = append(objects, objs...)
-	} else {
-		if len(applyArgs.filename) == 0 {
-			return fmt.Errorf("-f or -k is required")
-		}
-
-		manifests, err := scan(applyArgs.filename)
-		if err != nil {
-			return err
-		}
-		for _, manifest := range manifests {
-			ms, err := os.Open(manifest)
-			if err != nil {
-				return err
-			}
-
-			objs, err := inventoryMgr.ReadAll(bufio.NewReader(ms))
-			ms.Close()
-			if err != nil {
-				return fmt.Errorf("%s: %w", manifest, err)
-			}
-			objects = append(objects, objs...)
-		}
+	if applyArgs.kustomize == "" && len(applyArgs.filename) == 0 {
+		return fmt.Errorf("-f or -k is required")
 	}
-
-	sort.Sort(resmgr.ApplyOrder(objects))
-	if applyArgs.output != "" {
-		switch applyArgs.output {
-		case "yaml":
-			yml, err := inventoryMgr.ToYAML(objects)
-			if err != nil {
-				return err
-			}
-			fmt.Println(yml)
-			return nil
-		case "json":
-			json, err := inventoryMgr.ToJSON(objects)
-			if err != nil {
-				return err
-			}
-			fmt.Println(json)
-			return nil
-		default:
-			return fmt.Errorf("unsupported output, can be yaml or json")
-		}
-	}
-
 	if applyArgs.inventoryName == "" {
 		return fmt.Errorf("--inventory-name is required")
 	}
 	if applyArgs.inventoryNamespace == "" {
 		return fmt.Errorf("--inventory-namespace is required")
+	}
+
+	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename)
+	if err != nil {
+		return err
 	}
 
 	newInventory, err := inventoryMgr.Record(objects)
@@ -149,7 +89,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(change.String())
+		logger.Println(change.String())
 	}
 
 	staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
@@ -168,12 +108,12 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("prune failed, error: %w", err)
 		}
 		for _, change := range changeSet.Entries {
-			fmt.Println(change.String())
+			logger.Println(change.String())
 		}
 	}
 
 	if applyArgs.wait {
-		fmt.Println("waiting for resources to become ready...")
+		logger.Println("waiting for resources to become ready...")
 
 		err = resMgr.Wait(objects, 2*time.Second, rootArgs.timeout)
 		if err != nil {
@@ -187,7 +127,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		fmt.Println("all resources are ready")
+		logger.Println("all resources are ready")
 	}
 
 	return nil
