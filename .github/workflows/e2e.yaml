@@ -57,6 +57,12 @@ jobs:
           kubectl get ns kustomizer-demo 2>&1 | grep NotFound
           ./bin/kustomizer delete -i kustomizer-test --wait
           kubectl get crd tests.testing.kustomizer.dev 2>&1 | grep NotFound
+      - name: Load test apply (110 objects)
+        run: |
+          time ./bin/kustomizer apply -k ./testdata/loadtest/ --inventory-name load-test
+      - name: Load test delete (110 objects)
+        run: |
+          time ./bin/kustomizer delete --inventory-name load-test
       - name: Debug failure
         if: failure()
         run: |

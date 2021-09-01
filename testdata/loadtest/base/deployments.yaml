@@ -1,0 +1,739 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend1
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend1
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend1
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend2
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend2
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend2
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend3
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend3
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend3
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend4
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend4
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend4
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend5
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend5
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend5
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend6
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend6
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend6
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend7
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend7
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend7
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend8
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend8
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend8
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend9
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend9
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend9
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend10
+spec:
+  replicas: 0
+  minReadySeconds: 3
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 60
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: frontend10
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: frontend10
+    spec:
+      serviceAccountName: demo
+      containers:
+        - name: frontend
+          image: stefanprodan/podinfo:3.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: http-metrics
+              containerPort: 9797
+              protocol: TCP
+            - name: grpc
+              containerPort: 9999
+              protocol: TCP
+          command:
+            - ./podinfo
+            - --port=9898
+            - --port-metrics=9797
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#34577c"
+          livenessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - podcli
+                - check
+                - http
+                - localhost:9898/readyz
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 32Mi
