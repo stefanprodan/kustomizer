@@ -52,6 +52,8 @@ type ChangeSetEntry struct {
 	Subject string
 	// Action represents the action type taken by the reconciler for this object.
 	Action string
+	// Diff contains the object diff.
+	Diff string
 }
 
 func (e ChangeSetEntry) String() string {
