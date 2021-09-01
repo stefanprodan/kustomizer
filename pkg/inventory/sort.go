@@ -50,16 +50,11 @@ func (objects InventoryOrder) Less(i, j int) bool {
 // in the partial ordering of Kubernetes resources.
 func rankOfKind(kind string) int {
 	switch strings.ToLower(kind) {
-	// API extensions
 	case "customresourcedefinition":
 		return 0
-	// Namespace objects
 	case "namespace":
 		return 1
-	// Global objects
-	case "clusterrole", "clusterrolebinding", "ingressclass", "storageclass":
-		return 2
 	default:
-		return 3
+		return 2
 	}
 }

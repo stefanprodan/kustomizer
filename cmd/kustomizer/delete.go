@@ -64,6 +64,10 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	inv, err := inventoryMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	if err != nil {
+		return err
+	}
+
 	objects, err := inv.List()
 	if err != nil {
 		return err

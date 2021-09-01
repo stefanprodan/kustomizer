@@ -23,7 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// ApplyOrder implements the Sort interface for unstructured objects.
+// ApplyOrder implements the Sort interface for Kubernetes objects based on kind.
+// When creating objects: CRDs, namespaces and other global kinds go first, while webhooks go last.
+// When deleting objects: the order is inverted to allow the Kubernetes controllers to finalize custom resources.
 type ApplyOrder []*unstructured.Unstructured
 
 func (objects ApplyOrder) Len() int {
@@ -39,34 +41,31 @@ func (objects ApplyOrder) Less(i, j int) bool {
 	ni := objects[i].GetName()
 	kj := objects[j].GetKind()
 	nj := objects[j].GetName()
-	ranki, rankj := rankOfKind(ki), rankOfKind(kj)
+	ranki, rankj := RankOfKind(ki), RankOfKind(kj)
 	if ranki == rankj {
 		return ni < nj
 	}
 	return ranki < rankj
 }
 
-// rankOfKind returns an int denoting the position of the given kind
-// in the partial ordering of Kubernetes resources, according to which
-// kinds depend on which (derived by hand).
-func rankOfKind(kind string) int {
+// RankOfKind returns an int denoting the position of the given kind in the partial ordering of Kubernetes resources.
+func RankOfKind(kind string) int {
 	switch strings.ToLower(kind) {
-	// API extensions
-	case "customresourcedefinition":
+	case "customresourcedefinition", "apiservice":
 		return 0
-	// Global objects
-	case "namespace", "clusterrolebinding", "clusterrole":
+	case "namespace":
 		return 1
-	// Namespaced objects
-	case "serviceaccount", "role", "rolebinding", "service", "endpoint", "ingress":
+	case "clusterrole", "clusterrolebinding", "ingressclass", "runtimeclass", "storageclass", "priorityclass", "certificatesigningrequest", "podsecuritypolicy":
 		return 2
-	// Namespaced objects
-	case "resourcequota", "limitrange", "secret", "configmap", "persistentvolume", "persistentvolumeclaim":
-		return 2
-	// Workload objects
-	case "daemonset", "deployment", "job", "cronjob", "statefulset", "replicationcontroller", "replicaset", "pod":
+	case "secret", "configmap", "lease", "serviceaccount", "role", "rolebinding", "service", "endpoint", "endpointslice", "ingress", "networkpolicy":
 		return 3
-	default:
+	case "resourcequota", "limitrange", "podpreset", "persistentvolume", "persistentvolumeclaim", "poddisruptionbudget", "horizontalpodautoscaler":
 		return 4
+	case "daemonset", "deployment", "job", "cronjob", "statefulset", "replicationcontroller", "replicaset", "pod":
+		return 5
+	default:
+		return 6
+	case "mutatingwebhookconfiguration", "validatingwebhookconfiguration":
+		return 7
 	}
 }
