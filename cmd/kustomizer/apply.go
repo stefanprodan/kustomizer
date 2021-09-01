@@ -39,6 +39,7 @@ type applyFlags struct {
 	wait               bool
 	force              bool
 	prune              bool
+	mode               string
 }
 
 var applyArgs applyFlags
@@ -54,7 +55,8 @@ func init() {
 	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
 	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default",
 		"The namespace of the inventory configmap. The namespace must exist on the target cluster.")
-
+	applyCmd.Flags().StringVar(&applyArgs.mode, "mode", "Apply",
+		"The ResourceManager apply method, can be `Apply`, `ApplyAll`, `ApplyAllStaged`.")
 	rootCmd.AddCommand(applyCmd)
 }
 
@@ -69,6 +71,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
+	logger.Println("building inventory...")
 	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename)
 	if err != nil {
 		return err
@@ -78,6 +81,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
+	logger.Println(fmt.Sprintf("applying %v manifest(s)...", len(objects)))
 
 	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
 	if err != nil {
@@ -87,12 +91,33 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	for _, object := range objects {
-		change, err := resMgr.Apply(ctx, object, applyArgs.force)
+	switch applyArgs.mode {
+	case "Apply":
+		for _, object := range objects {
+			change, err := resMgr.Apply(ctx, object, applyArgs.force)
+			if err != nil {
+				return err
+			}
+			logger.Println(change.String())
+		}
+	case "ApplyAll":
+		changeSet, err := resMgr.ApplyAll(ctx, objects, applyArgs.force)
 		if err != nil {
 			return err
 		}
-		logger.Println(change.String())
+		for _, change := range changeSet.Entries {
+			logger.Println(change.String())
+		}
+	case "ApplyAllStaged":
+		changeSet, err := resMgr.ApplyAllStaged(ctx, objects, applyArgs.force, 30*time.Second)
+		if err != nil {
+			return err
+		}
+		for _, change := range changeSet.Entries {
+			logger.Println(change.String())
+		}
+	default:
+		return fmt.Errorf("mode not supported")
 	}
 
 	staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)

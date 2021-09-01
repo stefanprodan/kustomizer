@@ -42,6 +42,10 @@ func (c *ChangeSet) Add(e ChangeSetEntry) {
 	c.Entries = append(c.Entries, e)
 }
 
+func (c *ChangeSet) AddAll(e []ChangeSetEntry) {
+	c.Entries = append(c.Entries, e...)
+}
+
 // ChangeSetEntry defines the result of an action performed on an object.
 type ChangeSetEntry struct {
 	// Subject represents the Object ID in the format 'kind/namespace/name'.

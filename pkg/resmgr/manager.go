@@ -149,6 +149,48 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 	return changeSet, nil
 }
 
+// ApplyAllStaged extracts the CRDs and Namespaces, applies them with ApplyAll,
+// waits for CRDs and Namespaces to become ready, then is applies all the other objects.
+// This function should be used when the given objects have a mix of custom resource definition and custom resources,
+// or a mix of namespace definitions with namespaced objects.
+func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstructured.Unstructured, force bool, wait time.Duration) (*ChangeSet, error) {
+	changeSet := NewChangeSet()
+
+	// contains only CRDs and Namespaces
+	var stageOne []*unstructured.Unstructured
+
+	// contains all objects except for  CRDs and Namespaces
+	var stageTwo []*unstructured.Unstructured
+
+	for _, u := range objects {
+		if IsClusterDefinition(u.GetKind()) {
+			stageOne = append(stageOne, u)
+		} else {
+			stageTwo = append(stageTwo, u)
+		}
+	}
+
+	if len(stageOne) > 0 {
+		cs, err := kc.ApplyAll(ctx, stageOne, force)
+		if err != nil {
+			return nil, err
+		}
+		changeSet.AddAll(cs.Entries)
+
+		if err := kc.Wait(stageOne, 2*time.Second, wait); err != nil {
+			return nil, err
+		}
+	}
+
+	cs, err := kc.ApplyAll(ctx, stageTwo, force)
+	if err != nil {
+		return nil, err
+	}
+	changeSet.AddAll(cs.Entries)
+
+	return changeSet, nil
+}
+
 // DeleteAll deletes the given set of objects.
 func (kc *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructured.Unstructured) (*ChangeSet, error) {
 	sort.Sort(sort.Reverse(ApplyOrder(objects)))
@@ -192,7 +234,7 @@ func (kc *ResourceManager) apply(ctx context.Context, object *unstructured.Unstr
 
 // hasDrifted detects changes to metadata labels, metadata annotations and spec.
 func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured.Unstructured) bool {
-	if dryRunObject.GetResourceVersion() == "" || existingObject == nil {
+	if dryRunObject.GetResourceVersion() == "" {
 		return true
 	}
 
@@ -206,6 +248,10 @@ func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured
 
 	if _, ok := existingObject.Object["spec"]; ok {
 		if !apiequality.Semantic.DeepDerivative(dryRunObject.Object["spec"], existingObject.Object["spec"]) {
+			return true
+		}
+	} else if _, ok := existingObject.Object["webhooks"]; ok {
+		if !apiequality.Semantic.DeepDerivative(dryRunObject.Object["webhooks"], existingObject.Object["webhooks"]) {
 			return true
 		}
 	} else {

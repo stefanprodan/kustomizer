@@ -51,11 +51,11 @@ func (objects ApplyOrder) Less(i, j int) bool {
 // RankOfKind returns an int denoting the position of the given kind in the partial ordering of Kubernetes resources.
 func RankOfKind(kind string) int {
 	switch strings.ToLower(kind) {
-	case "customresourcedefinition", "apiservice":
+	case "customresourcedefinition":
 		return 0
 	case "namespace":
 		return 1
-	case "clusterrole", "clusterrolebinding", "ingressclass", "runtimeclass", "storageclass", "priorityclass", "certificatesigningrequest", "podsecuritypolicy":
+	case "apiservice", "clusterrole", "clusterrolebinding", "ingressclass", "runtimeclass", "storageclass", "priorityclass", "certificatesigningrequest", "podsecuritypolicy":
 		return 2
 	case "secret", "configmap", "lease", "serviceaccount", "role", "rolebinding", "service", "endpoint", "endpointslice", "ingress", "networkpolicy":
 		return 3
@@ -68,4 +68,8 @@ func RankOfKind(kind string) int {
 	case "mutatingwebhookconfiguration", "validatingwebhookconfiguration":
 		return 7
 	}
+}
+
+func IsClusterDefinition(kind string) bool {
+	return RankOfKind(kind) < 2
 }
