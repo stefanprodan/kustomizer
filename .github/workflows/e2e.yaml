@@ -59,13 +59,15 @@ jobs:
           kubectl get crd tests.testing.kustomizer.dev 2>&1 | grep NotFound
       - name: Load test apply (110 objects)
         run: |
-          time ./bin/kustomizer apply -k ./testdata/loadtest/ --inventory-name load-test
+          ./bin/kustomizer apply -k ./testdata/loadtest/ --inventory-name load-test
       - name: Load test delete (110 objects)
         run: |
-          time ./bin/kustomizer delete --inventory-name load-test
+          ./bin/kustomizer delete --inventory-name load-test
+      - name: Test staged apply
+        run: |
+          ./bin/kustomizer apply -k ./testdata/certs/ --prune --wait --inventory-name cert-test --mode=ApplyAllStaged
+          kubectl -n kustomizer-cert-test wait issuers/my-ca-issuer --for=condition=ready --timeout=1m
       - name: Debug failure
         if: failure()
         run: |
-          kubectl version --client --short
           kubectl -n default get configmaps -oyaml
-          kubectl -n kustomizer-demo get all
