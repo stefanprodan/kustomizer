@@ -116,7 +116,7 @@ func (kc *ResourceManager) validationError(object *unstructured.Unstructured, er
 	if object.GetKind() == "Secret" {
 		msg := "data values must be of type string"
 		if strings.Contains(err.Error(), "immutable") {
-			msg = "secret is is immutable"
+			msg = "secret is immutable"
 		}
 		return fmt.Errorf("%s is invalid, error: %s", kc.fmt.Unstructured(object), msg)
 	}
