@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// Diff performs a server-side apply dry-un and returns the fields that changed.
+// Diff performs a server-side apply dry-un and returns the fields that changed in YAML format.
 // If the diff contains Kubernetes Secrets, the data values are masked.
 func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()

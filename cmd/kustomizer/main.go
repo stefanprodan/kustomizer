@@ -73,7 +73,7 @@ func main() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		logger.Println(err)
+		logger.Println(`✗`, err)
 		os.Exit(1)
 	}
 }

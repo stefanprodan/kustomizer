@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -27,7 +29,7 @@ import (
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete the Kubernetes objects in the inventory.",
+	Short: "Delete the Kubernetes objects in the inventory including the inventory configmap.",
 	RunE:  deleteCmdRun,
 }
 
@@ -63,6 +65,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
+	logger.Println("retrieving inventory...")
 	inv, err := inventoryMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
 	if err != nil {
 		return err
@@ -73,12 +76,21 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changeSet, err := resMgr.DeleteAll(ctx, objects)
-	if err != nil {
-		return err
-	}
-	for _, change := range changeSet.Entries {
+	logger.Println(fmt.Sprintf("deleting %v manifest(s)...", len(objects)))
+	hasErrors := false
+	sort.Sort(sort.Reverse(resmgr.ApplyOrder(objects)))
+	for _, object := range objects {
+		change, err := resMgr.Delete(ctx, object)
+		if err != nil {
+			logger.Println(`✗`, err)
+			hasErrors = true
+			continue
+		}
 		logger.Println(change.String())
+	}
+
+	if hasErrors {
+		os.Exit(1)
 	}
 
 	err = inventoryMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
