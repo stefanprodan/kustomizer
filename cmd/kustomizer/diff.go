@@ -19,13 +19,15 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/spf13/cobra"
+
 	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 )
 
 var diffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "Diff Kubernetes manifests and Kustomize overlays using server-side dry-run.",
+	Short: "Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff.",
 	RunE:  runDiffCmd,
 }
 
@@ -79,21 +81,26 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if change.Diff != "" {
-			logger.Println(change.String())
+
+		if change.Action == string(resmgr.CreatedAction) {
+			logger.Println(`►`, change.Subject, "created")
+		}
+
+		if change.Action == string(resmgr.ConfiguredAction) {
+			logger.Println(`►`, change.Subject, "drifted")
 			logger.Println(change.Diff)
 		}
+
 	}
 
 	if diffArgs.inventoryName != "" {
-
 		staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, diffArgs.inventoryName, diffArgs.inventoryNamespace)
 		if err != nil {
 			return fmt.Errorf("inventory query failed, error: %w", err)
 		}
 
 		for _, object := range staleObjects {
-			logger.Println(fmt.Sprintf("%s/%s/%s deleted", object.GetKind(), object.GetNamespace(), object.GetName()))
+			logger.Println(`►`, fmt.Sprintf("%s deleted", resourceFormatter.Unstructured(object)))
 		}
 	}
 	return nil

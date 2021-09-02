@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,9 +46,10 @@ type rootFlags struct {
 }
 
 var (
-	rootArgs     = rootFlags{}
-	logger       = stderrLogger{stderr: os.Stderr}
-	inventoryMgr *inventory.InventoryManager
+	rootArgs          = rootFlags{}
+	logger            = stderrLogger{stderr: os.Stderr}
+	resourceFormatter = &resmgr.ResourceFormatter{}
+	inventoryMgr      *inventory.InventoryManager
 )
 
 func init() {

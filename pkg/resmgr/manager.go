@@ -20,11 +20,11 @@ package resmgr
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 // ResourceManager reconciles Kubernetes resources onto the target cluster.
@@ -78,15 +79,24 @@ func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstru
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
-		return kc.changeSetEntry(dryRunObject, CreatedAction, ""), nil
+		return kc.changeSetEntry(dryRunObject, CreatedAction), nil
 	}
 
 	// do not apply objects that have not drifted to avoid bumping the resource version
-	if drift, diff := kc.hasDrifted(existingObject, dryRunObject); drift {
-		return kc.changeSetEntry(object, ConfiguredAction, diff), nil
+	if kc.hasDrifted(existingObject, dryRunObject) {
+		cse := kc.changeSetEntry(object, ConfiguredAction)
+
+		unstructured.RemoveNestedField(dryRunObject.Object, "metadata", "managedFields")
+		unstructured.RemoveNestedField(existingObject.Object, "metadata", "managedFields")
+
+		d, _ := yaml.Marshal(dryRunObject)
+		e, _ := yaml.Marshal(existingObject)
+		cse.Diff = cmp.Diff(string(d), string(e))
+
+		return cse, nil
 	}
 
-	return kc.changeSetEntry(dryRunObject, UnchangedAction, ""), nil
+	return kc.changeSetEntry(dryRunObject, UnchangedAction), nil
 }
 
 // Apply performs a server-side apply of the given object if the matching in-cluster object is different or if it doesn't exist.
@@ -111,8 +121,8 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 	}
 
 	// do not apply objects that have not drifted to avoid bumping the resource version
-	if drift, _ := kc.hasDrifted(existingObject, dryRunObject); !drift {
-		return kc.changeSetEntry(object, UnchangedAction, ""), nil
+	if !kc.hasDrifted(existingObject, dryRunObject) {
+		return kc.changeSetEntry(object, UnchangedAction), nil
 	}
 
 	appliedObject := object.DeepCopy()
@@ -121,9 +131,10 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
-		return kc.changeSetEntry(appliedObject, CreatedAction, ""), nil
+		return kc.changeSetEntry(appliedObject, CreatedAction), nil
 	}
-	return kc.changeSetEntry(appliedObject, ConfiguredAction, ""), nil
+
+	return kc.changeSetEntry(appliedObject, ConfiguredAction), nil
 }
 
 // ApplyAll performs a server-side dry-run of the given objects, and based on the diff result,
@@ -150,15 +161,15 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 			return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
 		}
 
-		if drift, _ := kc.hasDrifted(existingObject, dryRunObject); drift {
+		if kc.hasDrifted(existingObject, dryRunObject) {
 			toApply = append(toApply, object)
 			if dryRunObject.GetResourceVersion() == "" {
-				changeSet.Add(*kc.changeSetEntry(dryRunObject, CreatedAction, ""))
+				changeSet.Add(*kc.changeSetEntry(dryRunObject, CreatedAction))
 			} else {
-				changeSet.Add(*kc.changeSetEntry(dryRunObject, ConfiguredAction, ""))
+				changeSet.Add(*kc.changeSetEntry(dryRunObject, ConfiguredAction))
 			}
 		} else {
-			changeSet.Add(*kc.changeSetEntry(dryRunObject, UnchangedAction, ""))
+			changeSet.Add(*kc.changeSetEntry(dryRunObject, UnchangedAction))
 		}
 	}
 
@@ -198,7 +209,7 @@ func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstru
 		if err != nil {
 			return nil, err
 		}
-		changeSet.AddAll(cs.Entries)
+		changeSet.Append(cs.Entries)
 
 		if err := kc.Wait(stageOne, 2*time.Second, wait); err != nil {
 			return nil, err
@@ -209,7 +220,7 @@ func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstru
 	if err != nil {
 		return nil, err
 	}
-	changeSet.AddAll(cs.Entries)
+	changeSet.Append(cs.Entries)
 
 	return changeSet, nil
 }
@@ -231,7 +242,7 @@ func (kc *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructure
 			if err != nil {
 				return nil, fmt.Errorf("%s delete failed, error: %w", kc.fmt.Unstructured(object), err)
 			} else {
-				changeSet.Add(*kc.changeSetEntry(object, DeletedAction, ""))
+				changeSet.Add(*kc.changeSetEntry(object, DeletedAction))
 			}
 		}
 	}
@@ -256,39 +267,39 @@ func (kc *ResourceManager) apply(ctx context.Context, object *unstructured.Unstr
 }
 
 // hasDrifted detects changes to metadata labels, metadata annotations and spec.
-func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured.Unstructured) (bool, string) {
+func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured.Unstructured) bool {
 	if dryRunObject.GetResourceVersion() == "" {
-		return true, ""
+		return true
 	}
 
 	if !apiequality.Semantic.DeepDerivative(dryRunObject.GetLabels(), existingObject.GetLabels()) {
-		return true, cmp.Diff(dryRunObject.Object, existingObject.Object)
+		return true
 
 	}
 
 	if !apiequality.Semantic.DeepDerivative(dryRunObject.GetAnnotations(), existingObject.GetAnnotations()) {
-		return true, cmp.Diff(dryRunObject.Object, existingObject.Object)
+		return true
 	}
 
 	if _, ok := existingObject.Object["spec"]; ok {
 		if !apiequality.Semantic.DeepDerivative(dryRunObject.Object["spec"], existingObject.Object["spec"]) {
-			return true, cmp.Diff(dryRunObject.Object, existingObject.Object)
+			return true
 		}
 	} else if _, ok := existingObject.Object["webhooks"]; ok {
 		if !apiequality.Semantic.DeepDerivative(dryRunObject.Object["webhooks"], existingObject.Object["webhooks"]) {
-			return true, cmp.Diff(dryRunObject.Object, existingObject.Object)
+			return true
 		}
 	} else {
 		if !apiequality.Semantic.DeepDerivative(dryRunObject.Object, existingObject.Object) {
-			return true, cmp.Diff(dryRunObject.Object, existingObject.Object)
+			return true
 		}
 	}
 
-	return false, ""
+	return false
 }
 
-func (kc *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action, diff string) *ChangeSetEntry {
-	return &ChangeSetEntry{kc.fmt.Unstructured(object), string(action), diff}
+func (kc *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
+	return &ChangeSetEntry{Subject: kc.fmt.Unstructured(object), Action: string(action)}
 }
 
 // Wait checks if the given set of objects has been fully reconciled.

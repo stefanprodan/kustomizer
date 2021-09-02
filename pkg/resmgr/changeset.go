@@ -34,15 +34,18 @@ type ChangeSet struct {
 	Entries []ChangeSetEntry
 }
 
+// NewChangeSet returns a ChangeSet will an empty slice of entries.
 func NewChangeSet() *ChangeSet {
 	return &ChangeSet{Entries: []ChangeSetEntry{}}
 }
 
+// Add appends the given entry to the end of the slice.
 func (c *ChangeSet) Add(e ChangeSetEntry) {
 	c.Entries = append(c.Entries, e)
 }
 
-func (c *ChangeSet) AddAll(e []ChangeSetEntry) {
+// Append adds the given ChangeSet entries to end of the slice.
+func (c *ChangeSet) Append(e []ChangeSetEntry) {
 	c.Entries = append(c.Entries, e...)
 }
 
@@ -52,7 +55,7 @@ type ChangeSetEntry struct {
 	Subject string
 	// Action represents the action type taken by the reconciler for this object.
 	Action string
-	// Diff contains the object diff.
+	// Diff contains the YAML diff resulting from server-side apply dry-run.
 	Diff string
 }
 
