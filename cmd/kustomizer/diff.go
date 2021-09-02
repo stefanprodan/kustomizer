@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -76,10 +77,13 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
+	invalid := false
 	for _, object := range objects {
 		change, err := resMgr.Diff(ctx, object)
 		if err != nil {
-			return err
+			logger.Println(`✗`, err)
+			invalid = true
+			continue
 		}
 
 		if change.Action == string(resmgr.CreatedAction) {
@@ -102,6 +106,10 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		for _, object := range staleObjects {
 			fmt.Println(`►`, fmt.Sprintf("%s deleted", resourceFormatter.Unstructured(object)))
 		}
+	}
+
+	if invalid {
+		os.Exit(1)
 	}
 	return nil
 }

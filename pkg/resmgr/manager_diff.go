@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -36,7 +37,7 @@ func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstru
 
 	dryRunObject := object.DeepCopy()
 	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
-		return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
+		return nil, kc.validationError(dryRunObject, err)
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
@@ -102,4 +103,19 @@ func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured
 	}
 
 	return false
+}
+
+// validationError formats the given error and hides sensitive data
+// if the error was caused by an invalid Kubernetes secrets.
+func (kc *ResourceManager) validationError(object *unstructured.Unstructured, err error) error {
+	if apierrors.IsNotFound(err) {
+		return fmt.Errorf("%s namespace not specified, error: %w", kc.fmt.Unstructured(object), err)
+	}
+
+	if object.GetKind() == "Secret" {
+		return fmt.Errorf("%s is invalid, error: data values must be of type string", kc.fmt.Unstructured(object))
+	}
+
+	return fmt.Errorf("%s is invalid, error: %w", kc.fmt.Unstructured(object), err)
+
 }

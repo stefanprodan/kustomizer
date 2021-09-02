@@ -48,7 +48,7 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 				return kc.Apply(ctx, object, force)
 			}
 		}
-		return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
+		return nil, kc.validationError(dryRunObject, err)
 	}
 
 	// do not apply objects that have not drifted to avoid bumping the resource version
@@ -89,7 +89,7 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 					return kc.ApplyAll(ctx, objects, force)
 				}
 			}
-			return nil, fmt.Errorf("%s apply dry-run failed, error: %w", kc.fmt.Unstructured(dryRunObject), err)
+			return nil, kc.validationError(dryRunObject, err)
 		}
 
 		if kc.hasDrifted(existingObject, dryRunObject) {
