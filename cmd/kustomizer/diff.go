@@ -27,7 +27,7 @@ import (
 
 var diffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff.",
+	Short: "Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff to stdout.",
 	RunE:  runDiffCmd,
 }
 
@@ -83,12 +83,12 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		if change.Action == string(resmgr.CreatedAction) {
-			logger.Println(`►`, change.Subject, "created")
+			fmt.Println(`►`, change.Subject, "created")
 		}
 
 		if change.Action == string(resmgr.ConfiguredAction) {
-			logger.Println(`►`, change.Subject, "drifted")
-			logger.Println(change.Diff)
+			fmt.Println(`►`, change.Subject, "drifted")
+			fmt.Println(change.Diff)
 		}
 
 	}
@@ -100,7 +100,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		for _, object := range staleObjects {
-			logger.Println(`►`, fmt.Sprintf("%s deleted", resourceFormatter.Unstructured(object)))
+			fmt.Println(`►`, fmt.Sprintf("%s deleted", resourceFormatter.Unstructured(object)))
 		}
 	}
 	return nil

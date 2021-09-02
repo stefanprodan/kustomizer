@@ -51,3 +51,23 @@ func (rf *ResourceFormatter) getSeparator() string {
 
 	return rf.Separator
 }
+
+func (rf *ResourceFormatter) MaskSecret(object *unstructured.Unstructured, mask string) (*unstructured.Unstructured, error) {
+	data, found, err := unstructured.NestedMap(object.Object, "data")
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
+		for k, _ := range data {
+			data[k] = mask
+		}
+
+		err = unstructured.SetNestedMap(object.Object, data, "data")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return object, err
+}

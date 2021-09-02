@@ -11,4 +11,9 @@ configMapGenerator:
   - name: test-config
     files:
       - test.conf
-
+secretGenerator:
+  - name: test-secret
+    options:
+      disableNameSuffixHash: true
+    files:
+      - secret.conf

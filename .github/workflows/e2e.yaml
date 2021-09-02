@@ -45,7 +45,11 @@ jobs:
       - name: Test diff --kustomize
         run: |
           echo "diff=test" >> testdata/kustomize/test.conf
-          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ --prune | grep drifted
+          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ --prune 2>&1 | grep drifted
+      - name: Test diff secret marks
+        run: |
+          echo "diff=test" >> testdata/kustomize/secret.conf
+          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '******'"
       - name: Test apply --filename
         run: |
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune

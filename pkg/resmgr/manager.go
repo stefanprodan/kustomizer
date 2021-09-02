@@ -82,16 +82,28 @@ func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstru
 		return kc.changeSetEntry(dryRunObject, CreatedAction), nil
 	}
 
-	// do not apply objects that have not drifted to avoid bumping the resource version
 	if kc.hasDrifted(existingObject, dryRunObject) {
 		cse := kc.changeSetEntry(object, ConfiguredAction)
 
 		unstructured.RemoveNestedField(dryRunObject.Object, "metadata", "managedFields")
 		unstructured.RemoveNestedField(existingObject.Object, "metadata", "managedFields")
 
+		if dryRunObject.GetKind() == "Secret" {
+			d, err := kc.fmt.MaskSecret(dryRunObject, "******")
+			if err != nil {
+				return nil, fmt.Errorf("masking secret data failed, error: %w", err)
+			}
+			dryRunObject = d
+			ex, err := kc.fmt.MaskSecret(existingObject, "*****")
+			if err != nil {
+				return nil, fmt.Errorf("masking secret data failed, error: %w", err)
+			}
+			existingObject = ex
+		}
+
 		d, _ := yaml.Marshal(dryRunObject)
 		e, _ := yaml.Marshal(existingObject)
-		cse.Diff = cmp.Diff(string(d), string(e))
+		cse.Diff = cmp.Diff(string(e), string(d))
 
 		return cse, nil
 	}
