@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,15 +37,14 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 
 	dryRunObject := object.DeepCopy()
 	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
-		if _, ok := apierrors.StatusCause(err, metav1.CauseTypeFieldValueInvalid); ok {
-			if force && strings.Contains(err.Error(), "immutable") {
-				if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
-					return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
-						kc.fmt.Unstructured(dryRunObject), err)
-				}
-				return kc.Apply(ctx, object, force)
+		if force && strings.Contains(err.Error(), "immutable") {
+			if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
+				return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
+					kc.fmt.Unstructured(dryRunObject), err)
 			}
+			return kc.Apply(ctx, object, force)
 		}
+
 		return nil, kc.validationError(dryRunObject, err)
 	}
 
@@ -80,15 +77,14 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 
 		dryRunObject := object.DeepCopy()
 		if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
-			if _, ok := apierrors.StatusCause(err, metav1.CauseTypeFieldValueInvalid); ok {
-				if force && strings.Contains(err.Error(), "immutable") {
-					if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
-						return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
-							kc.fmt.Unstructured(dryRunObject), err)
-					}
-					return kc.ApplyAll(ctx, objects, force)
+			if force && strings.Contains(err.Error(), "immutable") {
+				if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
+					return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
+						kc.fmt.Unstructured(dryRunObject), err)
 				}
+				return kc.ApplyAll(ctx, objects, force)
 			}
+
 			return nil, kc.validationError(dryRunObject, err)
 		}
 

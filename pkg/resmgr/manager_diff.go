@@ -20,6 +20,7 @@ package resmgr
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -113,7 +114,11 @@ func (kc *ResourceManager) validationError(object *unstructured.Unstructured, er
 	}
 
 	if object.GetKind() == "Secret" {
-		return fmt.Errorf("%s is invalid, error: data values must be of type string", kc.fmt.Unstructured(object))
+		msg := "data values must be of type string"
+		if strings.Contains(err.Error(), "immutable") {
+			msg = "secret is is immutable"
+		}
+		return fmt.Errorf("%s is invalid, error: %s", kc.fmt.Unstructured(object), msg)
 	}
 
 	return fmt.Errorf("%s is invalid, error: %w", kc.fmt.Unstructured(object), err)
