@@ -18,16 +18,14 @@ func TestApply(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	var configMap *unstructured.Unstructured
-	var configMapName string
-
-	var secret *unstructured.Unstructured
-	var secretName string
-
-	objects, err := readManifest("testdata/test1.yaml", generateName("ns"))
+	id := generateName("apply")
+	objects, err := readManifest("testdata/test1.yaml", id)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	configMapName, configMap := getObjectFrom(objects, "ConfigMap", id)
+	secretName, secret := getObjectFrom(objects, "Secret", id)
 
 	t.Run("creates objects in order", func(t *testing.T) {
 		// create objects
@@ -60,14 +58,14 @@ func TestApply(t *testing.T) {
 
 	t.Run("does not apply unchanged objects", func(t *testing.T) {
 		// no-op apply
-		unchangedChangeSet, err := manager.ApplyAllStaged(ctx, objects, false, timeout)
+		changeSet, err := manager.ApplyAllStaged(ctx, objects, false, timeout)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// verify the change set contains only unchanged actions
 		var output []string
-		for _, entry := range unchangedChangeSet.Entries {
+		for _, entry := range changeSet.Entries {
 			if diff := cmp.Diff(string(UnchangedAction), entry.Action); diff != "" {
 				t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
 			}
@@ -76,15 +74,6 @@ func TestApply(t *testing.T) {
 	})
 
 	t.Run("applies only changed objects", func(t *testing.T) {
-		// extract configmap
-		for _, object := range objects {
-			if object.GetKind() == "ConfigMap" {
-				configMap = object
-				break
-			}
-		}
-		configMapName = manager.fmt.Unstructured(configMap)
-
 		// update a value in the configmap
 		err = unstructured.SetNestedField(configMap.Object, "val", "data", "key")
 		if err != nil {
@@ -92,13 +81,13 @@ func TestApply(t *testing.T) {
 		}
 
 		// apply changes
-		configuredChangeSet, err := manager.ApplyAllStaged(ctx, objects, false, timeout)
+		changeSet, err := manager.ApplyAllStaged(ctx, objects, false, timeout)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// verify the change set contains the configured action only for the configmap
-		for _, entry := range configuredChangeSet.Entries {
+		for _, entry := range changeSet.Entries {
 			if entry.Subject == configMapName {
 				if diff := cmp.Diff(string(ConfiguredAction), entry.Action); diff != "" {
 					t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
@@ -158,16 +147,7 @@ func TestApply(t *testing.T) {
 		}
 	})
 
-	t.Run("fails to apply immutable secrets", func(t *testing.T) {
-		// extract secret
-		for _, object := range objects {
-			if object.GetKind() == "Secret" {
-				secret = object
-				break
-			}
-		}
-		secretName = manager.fmt.Unstructured(secret)
-
+	t.Run("fails to apply immutable secret", func(t *testing.T) {
 		// update a value in the secret
 		err = unstructured.SetNestedField(secret.Object, "val-secret", "stringData", "key")
 		if err != nil {
@@ -187,7 +167,7 @@ func TestApply(t *testing.T) {
 		}
 	})
 
-	t.Run("force applies immutable secrets", func(t *testing.T) {
+	t.Run("force applies immutable secret", func(t *testing.T) {
 		// force apply
 		changeSet, err := manager.ApplyAllStaged(ctx, objects, true, timeout)
 		if err != nil {

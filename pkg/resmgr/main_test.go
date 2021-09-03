@@ -19,6 +19,7 @@ import (
 )
 
 var manager *ResourceManager
+var resFmt = &ResourceFormatter{}
 
 func TestMain(m *testing.M) {
 	testEnv := &envtest.Environment{}
@@ -118,6 +119,15 @@ var nextNameId int64
 func generateName(prefix string) string {
 	id := atomic.AddInt64(&nextNameId, 1)
 	return fmt.Sprintf("%s-%d", prefix, id)
+}
+
+func getObjectFrom(objects []*unstructured.Unstructured, kind, name string) (string, *unstructured.Unstructured) {
+	for _, object := range objects {
+		if object.GetKind() == kind && object.GetName() == name {
+			return resFmt.Unstructured(object), object
+		}
+	}
+	return "", nil
 }
 
 func removeObject(s []*unstructured.Unstructured, index int) []*unstructured.Unstructured {
