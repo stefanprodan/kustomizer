@@ -30,7 +30,7 @@ install-envtest: setup-envtest
 
 KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) use -i $(ENVTEST_AKUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
 test: tidy fmt vet install-envtest
-	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -parallel 4 -coverprofile cover.out
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
