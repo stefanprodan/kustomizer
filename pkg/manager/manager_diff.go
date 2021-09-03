@@ -33,21 +33,21 @@ import (
 
 // Diff performs a server-side apply dry-un and returns the fields that changed in YAML format.
 // If the diff contains Kubernetes Secrets, the data values are masked.
-func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
+func (m *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	_ = m.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 	dryRunObject := object.DeepCopy()
-	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
-		return nil, kc.validationError(dryRunObject, err)
+	if err := m.dryRunApply(ctx, dryRunObject); err != nil {
+		return nil, m.validationError(dryRunObject, err)
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
-		return kc.changeSetEntry(dryRunObject, CreatedAction), nil
+		return m.changeSetEntry(dryRunObject, CreatedAction), nil
 	}
 
-	if kc.hasDrifted(existingObject, dryRunObject) {
-		cse := kc.changeSetEntry(object, ConfiguredAction)
+	if m.hasDrifted(existingObject, dryRunObject) {
+		cse := m.changeSetEntry(object, ConfiguredAction)
 
 		unstructured.RemoveNestedField(dryRunObject.Object, "metadata", "managedFields")
 		unstructured.RemoveNestedField(existingObject.Object, "metadata", "managedFields")
@@ -72,11 +72,11 @@ func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstru
 		return cse, nil
 	}
 
-	return kc.changeSetEntry(dryRunObject, UnchangedAction), nil
+	return m.changeSetEntry(dryRunObject, UnchangedAction), nil
 }
 
 // hasDrifted detects changes to metadata labels, metadata annotations, spec and webhooks.
-func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured.Unstructured) bool {
+func (m *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured.Unstructured) bool {
 	if dryRunObject.GetResourceVersion() == "" {
 		return true
 	}
@@ -109,7 +109,7 @@ func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured
 
 // validationError formats the given error and hides sensitive data
 // if the error was caused by an invalid Kubernetes secrets.
-func (kc *ResourceManager) validationError(object *unstructured.Unstructured, err error) error {
+func (m *ResourceManager) validationError(object *unstructured.Unstructured, err error) error {
 	if apierrors.IsNotFound(err) {
 		return fmt.Errorf("%s namespace not specified, error: %w", objectutil.FmtUnstructured(object), err)
 	}

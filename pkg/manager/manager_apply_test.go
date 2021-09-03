@@ -25,6 +25,8 @@ func TestApply(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	manager.SetOwnerLabels(objects, "app1", "default")
+
 	configMapName, configMap := getObjectFrom(objects, "ConfigMap", id)
 	secretName, secret := getObjectFrom(objects, "Secret", id)
 

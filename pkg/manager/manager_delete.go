@@ -28,29 +28,29 @@ import (
 )
 
 // Delete deletes the given object (not found errors are ignored).
-func (kc *ResourceManager) Delete(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
+func (m *ResourceManager) Delete(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	err := kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	err := m.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("%s query failed, error: %w", objectutil.FmtUnstructured(object), err)
 		}
 	} else {
-		if err := kc.client.Delete(ctx, existingObject); err != nil {
+		if err := m.client.Delete(ctx, existingObject); err != nil {
 			return nil, fmt.Errorf("%s delete failed, error: %w", objectutil.FmtUnstructured(object), err)
 		}
 	}
 
-	return kc.changeSetEntry(object, DeletedAction), nil
+	return m.changeSetEntry(object, DeletedAction), nil
 }
 
 // DeleteAll deletes the given set of objects (not found errors are ignored)..
-func (kc *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructured.Unstructured) (*ChangeSet, error) {
+func (m *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructured.Unstructured) (*ChangeSet, error) {
 	sort.Sort(sort.Reverse(objectutil.ApplyOrder(objects)))
 	changeSet := NewChangeSet()
 
 	for _, object := range objects {
-		cse, err := kc.Delete(ctx, object)
+		cse, err := m.Delete(ctx, object)
 		if err != nil {
 			return nil, err
 		}

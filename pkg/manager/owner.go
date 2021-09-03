@@ -18,9 +18,6 @@ limitations under the License.
 package manager
 
 // Owner contains options for setting the field manager and ownership labels group.
-// The ownership labels are in the format:
-// 	<Group>/name: <Name>
-// 	<Group>/namespace: <Namespace>
 type Owner struct {
 	// Field sets the field manager name for the given server-side apply patch.
 	Field string

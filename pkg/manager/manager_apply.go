@@ -32,78 +32,78 @@ import (
 // Apply performs a server-side apply of the given object if the matching in-cluster object is different or if it doesn't exist.
 // Drift detection is performed by comparing the server-side dry-run result with the existing object.
 // When immutable field changes are detected, the object is recreated if 'force' is set to 'true'.
-func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstructured, force bool) (*ChangeSetEntry, error) {
+func (m *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstructured, force bool) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	_ = m.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 	dryRunObject := object.DeepCopy()
-	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
+	if err := m.dryRunApply(ctx, dryRunObject); err != nil {
 		if force && strings.Contains(err.Error(), "immutable") {
-			if err := kc.client.Delete(ctx, existingObject); err != nil {
+			if err := m.client.Delete(ctx, existingObject); err != nil {
 				return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
 					objectutil.FmtUnstructured(dryRunObject), err)
 			}
-			return kc.Apply(ctx, object, force)
+			return m.Apply(ctx, object, force)
 		}
 
-		return nil, kc.validationError(dryRunObject, err)
+		return nil, m.validationError(dryRunObject, err)
 	}
 
 	// do not apply objects that have not drifted to avoid bumping the resource version
-	if !kc.hasDrifted(existingObject, dryRunObject) {
-		return kc.changeSetEntry(object, UnchangedAction), nil
+	if !m.hasDrifted(existingObject, dryRunObject) {
+		return m.changeSetEntry(object, UnchangedAction), nil
 	}
 
 	appliedObject := object.DeepCopy()
-	if err := kc.apply(ctx, appliedObject); err != nil {
+	if err := m.apply(ctx, appliedObject); err != nil {
 		return nil, fmt.Errorf("%s apply failed, error: %w", objectutil.FmtUnstructured(appliedObject), err)
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
-		return kc.changeSetEntry(appliedObject, CreatedAction), nil
+		return m.changeSetEntry(appliedObject, CreatedAction), nil
 	}
 
-	return kc.changeSetEntry(appliedObject, ConfiguredAction), nil
+	return m.changeSetEntry(appliedObject, ConfiguredAction), nil
 }
 
 // ApplyAll performs a server-side dry-run of the given objects, and based on the diff result,
 // it applies the objects that are new or modified.
-func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
+func (m *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
 	sort.Sort(objectutil.ApplyOrder(objects))
 	changeSet := NewChangeSet()
 	var toApply []*unstructured.Unstructured
 	for _, object := range objects {
 		existingObject := object.DeepCopy()
-		_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+		_ = m.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 		dryRunObject := object.DeepCopy()
-		if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
+		if err := m.dryRunApply(ctx, dryRunObject); err != nil {
 			if force && strings.Contains(err.Error(), "immutable") {
-				if err := kc.client.Delete(ctx, existingObject); err != nil {
+				if err := m.client.Delete(ctx, existingObject); err != nil {
 					return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
 						objectutil.FmtUnstructured(dryRunObject), err)
 				}
-				return kc.ApplyAll(ctx, objects, force)
+				return m.ApplyAll(ctx, objects, force)
 			}
 
-			return nil, kc.validationError(dryRunObject, err)
+			return nil, m.validationError(dryRunObject, err)
 		}
 
-		if kc.hasDrifted(existingObject, dryRunObject) {
+		if m.hasDrifted(existingObject, dryRunObject) {
 			toApply = append(toApply, object)
 			if dryRunObject.GetResourceVersion() == "" {
-				changeSet.Add(*kc.changeSetEntry(dryRunObject, CreatedAction))
+				changeSet.Add(*m.changeSetEntry(dryRunObject, CreatedAction))
 			} else {
-				changeSet.Add(*kc.changeSetEntry(dryRunObject, ConfiguredAction))
+				changeSet.Add(*m.changeSetEntry(dryRunObject, ConfiguredAction))
 			}
 		} else {
-			changeSet.Add(*kc.changeSetEntry(dryRunObject, UnchangedAction))
+			changeSet.Add(*m.changeSetEntry(dryRunObject, UnchangedAction))
 		}
 	}
 
 	for _, object := range toApply {
 		appliedObject := object.DeepCopy()
-		if err := kc.apply(ctx, appliedObject); err != nil {
+		if err := m.apply(ctx, appliedObject); err != nil {
 			return nil, fmt.Errorf("%s apply failed, error: %w", objectutil.FmtUnstructured(appliedObject), err)
 		}
 	}
@@ -115,7 +115,7 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 // waits for CRDs and Namespaces to become ready, then is applies all the other objects.
 // This function should be used when the given objects have a mix of custom resource definition and custom resources,
 // or a mix of namespace definitions with namespaced objects.
-func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstructured.Unstructured, force bool, wait time.Duration) (*ChangeSet, error) {
+func (m *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstructured.Unstructured, force bool, wait time.Duration) (*ChangeSet, error) {
 	changeSet := NewChangeSet()
 
 	// contains only CRDs and Namespaces
@@ -133,18 +133,18 @@ func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstru
 	}
 
 	if len(stageOne) > 0 {
-		cs, err := kc.ApplyAll(ctx, stageOne, force)
+		cs, err := m.ApplyAll(ctx, stageOne, force)
 		if err != nil {
 			return nil, err
 		}
 		changeSet.Append(cs.Entries)
 
-		if err := kc.Wait(stageOne, 2*time.Second, wait); err != nil {
+		if err := m.Wait(stageOne, 2*time.Second, wait); err != nil {
 			return nil, err
 		}
 	}
 
-	cs, err := kc.ApplyAll(ctx, stageTwo, force)
+	cs, err := m.ApplyAll(ctx, stageTwo, force)
 	if err != nil {
 		return nil, err
 	}
@@ -153,19 +153,19 @@ func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstru
 	return changeSet, nil
 }
 
-func (kc *ResourceManager) dryRunApply(ctx context.Context, object *unstructured.Unstructured) error {
+func (m *ResourceManager) dryRunApply(ctx context.Context, object *unstructured.Unstructured) error {
 	opts := []client.PatchOption{
 		client.DryRunAll,
 		client.ForceOwnership,
-		client.FieldOwner(kc.owner.Field),
+		client.FieldOwner(m.owner.Field),
 	}
-	return kc.client.Patch(ctx, object, client.Apply, opts...)
+	return m.client.Patch(ctx, object, client.Apply, opts...)
 }
 
-func (kc *ResourceManager) apply(ctx context.Context, object *unstructured.Unstructured) error {
+func (m *ResourceManager) apply(ctx context.Context, object *unstructured.Unstructured) error {
 	opts := []client.PatchOption{
 		client.ForceOwnership,
-		client.FieldOwner(kc.owner.Field),
+		client.FieldOwner(m.owner.Field),
 	}
-	return kc.client.Patch(ctx, object, client.Apply, opts...)
+	return m.client.Patch(ctx, object, client.Apply, opts...)
 }

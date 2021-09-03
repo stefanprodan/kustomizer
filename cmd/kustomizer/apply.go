@@ -99,6 +99,8 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		Group: PROJECT + ".dev",
 	})
 
+	resMgr.SetOwnerLabels(objects, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 

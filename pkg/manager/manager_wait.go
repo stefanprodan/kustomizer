@@ -37,7 +37,7 @@ import (
 )
 
 // Wait checks if the given set of objects has been fully reconciled.
-func (kc *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, timeout time.Duration) error {
+func (m *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, timeout time.Duration) error {
 	objectsMeta := object.UnstructuredsToObjMetas(objects)
 	statusCollector := collector.NewResourceStatusCollector(objectsMeta)
 
@@ -48,7 +48,7 @@ func (kc *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, 
 		PollInterval: interval,
 		UseCache:     true,
 	}
-	eventsChan := kc.poller.Poll(ctx, objectsMeta, opts)
+	eventsChan := m.poller.Poll(ctx, objectsMeta, opts)
 
 	lastStatus := make(map[object.ObjMetadata]*event.ResourceStatus)
 
@@ -103,22 +103,22 @@ func (kc *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, 
 }
 
 // WaitForTermination waits for the given objects to be deleted from the cluster.
-func (kc *ResourceManager) WaitForTermination(objects []*unstructured.Unstructured, interval, timeout time.Duration) error {
+func (m *ResourceManager) WaitForTermination(objects []*unstructured.Unstructured, interval, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	for _, object := range objects {
-		if err := wait.PollImmediate(interval, timeout, kc.isDeleted(ctx, object)); err != nil {
+		if err := wait.PollImmediate(interval, timeout, m.isDeleted(ctx, object)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (kc *ResourceManager) isDeleted(ctx context.Context, object *unstructured.Unstructured) wait.ConditionFunc {
+func (m *ResourceManager) isDeleted(ctx context.Context, object *unstructured.Unstructured) wait.ConditionFunc {
 	return func() (bool, error) {
 		obj := object.DeepCopy()
-		err := kc.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+		err := m.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

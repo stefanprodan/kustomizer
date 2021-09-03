@@ -42,19 +42,23 @@ func NewResourceManager(client client.Client, poller *polling.StatusPoller, owne
 }
 
 // KubeClient returns the underlying controller-runtime client.
-func (kc *ResourceManager) KubeClient() client.Client {
-	return kc.client
+func (m *ResourceManager) KubeClient() client.Client {
+	return m.client
 }
 
-func (kc *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
+func (m *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
 	return &ChangeSetEntry{Subject: objectutil.FmtUnstructured(object), Action: string(action)}
 }
 
-//func (kc *ResourceManager) SetOwnerLabels(objects []*unstructured.Unstructured, name, namespace string) {
-//	for _, object := range objects {
-//		object.SetLabels(map[string]string{
-//			kc.fieldOwner + "/name":      name,
-//			kc.fieldOwner + "/namespace": namespace,
-//		})
-//	}
-//}
+// SetOwnerLabels adds the ownership labels to the given objects.
+// The ownership labels are in the format:
+// 	<owner.group>/name: <name>
+// 	<owner.group>/namespace: <namespace>
+func (m *ResourceManager) SetOwnerLabels(objects []*unstructured.Unstructured, name, namespace string) {
+	for _, object := range objects {
+		object.SetLabels(map[string]string{
+			m.owner.Group + "/name":      name,
+			m.owner.Group + "/namespace": namespace,
+		})
+	}
+}

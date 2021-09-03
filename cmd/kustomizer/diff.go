@@ -89,6 +89,10 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
+	if diffArgs.inventoryName != "" {
+		resMgr.SetOwnerLabels(objects, diffArgs.inventoryName, diffArgs.inventoryNamespace)
+	}
+
 	invalid := false
 	for _, object := range objects {
 		change, err := resMgr.Diff(ctx, object)
