@@ -15,11 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package manager
 
 import (
 	"context"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,14 +30,14 @@ import (
 // Delete deletes the given object (not found errors are ignored).
 func (kc *ResourceManager) Delete(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	err := kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	err := kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("%s query failed, error: %w", kc.fmt.Unstructured(object), err)
+			return nil, fmt.Errorf("%s query failed, error: %w", objectutil.FmtUnstructured(object), err)
 		}
 	} else {
-		if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
-			return nil, fmt.Errorf("%s delete failed, error: %w", kc.fmt.Unstructured(object), err)
+		if err := kc.client.Delete(ctx, existingObject); err != nil {
+			return nil, fmt.Errorf("%s delete failed, error: %w", objectutil.FmtUnstructured(object), err)
 		}
 	}
 
@@ -45,7 +46,7 @@ func (kc *ResourceManager) Delete(ctx context.Context, object *unstructured.Unst
 
 // DeleteAll deletes the given set of objects (not found errors are ignored)..
 func (kc *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructured.Unstructured) (*ChangeSet, error) {
-	sort.Sort(sort.Reverse(ApplyOrder(objects)))
+	sort.Sort(sort.Reverse(objectutil.ApplyOrder(objects)))
 	changeSet := NewChangeSet()
 
 	for _, object := range objects {

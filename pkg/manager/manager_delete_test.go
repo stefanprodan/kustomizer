@@ -1,7 +1,8 @@
-package resmgr
+package manager
 
 import (
 	"context"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestDelete(t *testing.T) {
 		// expected deleted order
 		var expected []string
 		for _, object := range []*unstructured.Unstructured{configMap, binding} {
-			expected = append(expected, manager.fmt.Unstructured(object))
+			expected = append(expected, objectutil.FmtUnstructured(object))
 		}
 
 		// verify the change set contains only created actions
@@ -58,13 +59,13 @@ func TestDelete(t *testing.T) {
 		}
 
 		configMapClone := configMap.DeepCopy()
-		err = manager.kubeClient.Get(ctx, client.ObjectKeyFromObject(configMapClone), configMapClone)
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(configMapClone), configMapClone)
 		if !apierrors.IsNotFound(err) {
 			t.Fatal(err)
 		}
 
 		bindingClone := binding.DeepCopy()
-		err = manager.kubeClient.Get(ctx, client.ObjectKeyFromObject(bindingClone), bindingClone)
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(bindingClone), bindingClone)
 		if !apierrors.IsNotFound(err) {
 			t.Fatal(err)
 		}
@@ -82,7 +83,7 @@ func TestDelete(t *testing.T) {
 		}
 
 		secretClone := secret.DeepCopy()
-		err = manager.kubeClient.Get(ctx, client.ObjectKeyFromObject(secretClone), secretClone)
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(secretClone), secretClone)
 		if !apierrors.IsNotFound(err) {
 			t.Fatal(err)
 		}

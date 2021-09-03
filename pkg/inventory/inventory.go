@@ -23,60 +23,95 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
+
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
-// Inventory is a record of objects that are applied on a cluster.
+// Inventory is a record of objects that are applied on a cluster stored as a configmap.
 type Inventory struct {
-	Entries map[string]string `json:"entries"`
+	// Name of the inventory configmap.
+	Name string
+
+	// Namespace of the inventory configmap.
+	Namespace string
+
+	// Entries of Kubernetes objects metadata.
+	Entries []Entry `json:"entries"`
 }
 
-func NewInventory() *Inventory {
-	return &Inventory{Entries: map[string]string{}}
+// Entry is a record of a Kubernetes object metadata.
+type Entry struct {
+	ObjectID      string `json:"id"`
+	ObjectVersion string `json:"ver"`
 }
 
-// Add adds the given objects to the inventory.
-func (inv *Inventory) Add(objects []*unstructured.Unstructured) error {
+func NewInventory(name, namespace string) *Inventory {
+	return &Inventory{
+		Name:      name,
+		Namespace: namespace,
+		Entries:   []Entry{},
+	}
+}
+
+// AddObjects extracts the metadata from the given objects and adds it to the inventory.
+func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
+	sort.Sort(objectutil.ApplyOrder(objects))
 	for _, om := range objects {
-		objMeta := object.UnstructuredToObjMeta(om)
+		objMetadata := object.UnstructuredToObjMeta(om)
 		gv, err := schema.ParseGroupVersion(om.GetAPIVersion())
 		if err != nil {
 			return err
 		}
-		inv.Entries[objMeta.String()] = gv.Version
+
+		inv.Entries = append(inv.Entries, Entry{
+			ObjectID:      objMetadata.String(),
+			ObjectVersion: gv.Version,
+		})
 	}
 
 	return nil
 }
 
-// List returns the inventory entries as unstructured.Unstructured objects.
-func (inv *Inventory) List() ([]*unstructured.Unstructured, error) {
-	objects := make([]*unstructured.Unstructured, 0)
-	list, err := inv.ListMeta()
-	if err != nil {
-		return nil, err
+// VersionOf returns the API version of the given object if found in this inventory.
+func (inv *Inventory) VersionOf(objMetadata object.ObjMetadata) string {
+	for _, entry := range inv.Entries {
+		if entry.ObjectID == objMetadata.String() {
+			return entry.ObjectVersion
+		}
 	}
+	return ""
+}
 
-	for _, metadata := range list {
+// ListObjects returns the inventory entries as unstructured.Unstructured objects.
+func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
+	objects := make([]*unstructured.Unstructured, 0)
+
+	for _, entry := range inv.Entries {
+		objMetadata, err := object.ParseObjMetadata(entry.ObjectID)
+		if err != nil {
+			return nil, err
+		}
+
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   metadata.GroupKind.Group,
-			Kind:    metadata.GroupKind.Kind,
-			Version: inv.Entries[metadata.String()],
+			Group:   objMetadata.GroupKind.Group,
+			Kind:    objMetadata.GroupKind.Kind,
+			Version: entry.ObjectVersion,
 		})
-		u.SetName(metadata.Name)
-		u.SetNamespace(metadata.Namespace)
+		u.SetName(objMetadata.Name)
+		u.SetNamespace(objMetadata.Namespace)
 		objects = append(objects, u)
 	}
 
-	sort.Sort(InventoryOrder(objects))
+	sort.Sort(objectutil.ApplyOrder(objects))
 	return objects, nil
 }
 
 // ListMeta returns the inventory entries as object.ObjMetadata objects.
 func (inv *Inventory) ListMeta() ([]object.ObjMetadata, error) {
 	var metas []object.ObjMetadata
-	for e, _ := range inv.Entries {
-		m, err := object.ParseObjMetadata(e)
+	for _, e := range inv.Entries {
+		m, err := object.ParseObjMetadata(e.ObjectID)
 		if err != nil {
 			return metas, err
 		}
@@ -109,13 +144,13 @@ func (inv *Inventory) Diff(target *Inventory) ([]*unstructured.Unstructured, err
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   metadata.GroupKind.Group,
 			Kind:    metadata.GroupKind.Kind,
-			Version: inv.Entries[metadata.String()],
+			Version: inv.VersionOf(metadata),
 		})
 		u.SetName(metadata.Name)
 		u.SetNamespace(metadata.Namespace)
 		objects = append(objects, u)
 	}
 
-	sort.Sort(InventoryOrder(objects))
+	sort.Sort(objectutil.ApplyOrder(objects))
 	return objects, nil
 }

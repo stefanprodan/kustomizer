@@ -32,7 +32,7 @@ import (
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var buildCmd = &cobra.Command{
@@ -72,13 +72,13 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 
 	switch buildArgs.output {
 	case "yaml":
-		yml, err := inventoryMgr.ToYAML(objects)
+		yml, err := objectutil.ObjectsToYAML(objects)
 		if err != nil {
 			return err
 		}
 		fmt.Println(yml)
 	case "json":
-		json, err := inventoryMgr.ToJSON(objects)
+		json, err := objectutil.ObjectsToJSON(objects)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 			return nil, err
 		}
 
-		objs, err := inventoryMgr.ReadAll(bytes.NewReader(data))
+		objs, err := objectutil.ReadObjects(bytes.NewReader(data))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", kustomizePath, err)
 		}
@@ -116,7 +116,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 				return nil, err
 			}
 
-			objs, err := inventoryMgr.ReadAll(bufio.NewReader(ms))
+			objs, err := objectutil.ReadObjects(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", manifest, err)
@@ -125,7 +125,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 		}
 	}
 
-	sort.Sort(resmgr.ApplyOrder(objects))
+	sort.Sort(objectutil.ApplyOrder(objects))
 	return objects, nil
 }
 

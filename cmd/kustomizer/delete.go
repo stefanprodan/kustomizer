@@ -24,7 +24,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
+
+	"github.com/stefanprodan/kustomizer/pkg/manager"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var deleteCmd = &cobra.Command{
@@ -57,28 +59,39 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
 	logger.Println("retrieving inventory...")
-	inv, err := inventoryMgr.Retrieve(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+
+	kubeClient, err := newKubeClient(rootArgs.kubeconfig, rootArgs.kubecontext)
+	if err != nil {
+		return fmt.Errorf("client init failed: %w", err)
+	}
+
+	statusPoller, err := newKubeStatusPoller(rootArgs.kubeconfig, rootArgs.kubecontext)
+	if err != nil {
+		return fmt.Errorf("status poller init failed: %w", err)
+	}
+
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
+		Field: PROJECT,
+		Group: PROJECT + ".dev",
+	})
+
+	inv, err := inventoryMgr.Retrieve(ctx, kubeClient, deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
 	if err != nil {
 		return err
 	}
 
-	objects, err := inv.List()
+	objects, err := inv.ListObjects()
 	if err != nil {
 		return err
 	}
 
 	logger.Println(fmt.Sprintf("deleting %v manifest(s)...", len(objects)))
 	hasErrors := false
-	sort.Sort(sort.Reverse(resmgr.ApplyOrder(objects)))
+	sort.Sort(sort.Reverse(objectutil.ApplyOrder(objects)))
 	for _, object := range objects {
 		change, err := resMgr.Delete(ctx, object)
 		if err != nil {

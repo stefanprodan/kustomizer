@@ -15,11 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package manager
 
 import (
 	"context"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"sort"
 	"strings"
 	"time"
@@ -33,14 +34,14 @@ import (
 // When immutable field changes are detected, the object is recreated if 'force' is set to 'true'.
 func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstructured, force bool) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	_ = kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 	dryRunObject := object.DeepCopy()
 	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
 		if force && strings.Contains(err.Error(), "immutable") {
-			if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
+			if err := kc.client.Delete(ctx, existingObject); err != nil {
 				return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
-					kc.fmt.Unstructured(dryRunObject), err)
+					objectutil.FmtUnstructured(dryRunObject), err)
 			}
 			return kc.Apply(ctx, object, force)
 		}
@@ -55,7 +56,7 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 
 	appliedObject := object.DeepCopy()
 	if err := kc.apply(ctx, appliedObject); err != nil {
-		return nil, fmt.Errorf("%s apply failed, error: %w", kc.fmt.Unstructured(appliedObject), err)
+		return nil, fmt.Errorf("%s apply failed, error: %w", objectutil.FmtUnstructured(appliedObject), err)
 	}
 
 	if dryRunObject.GetResourceVersion() == "" {
@@ -68,19 +69,19 @@ func (kc *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstr
 // ApplyAll performs a server-side dry-run of the given objects, and based on the diff result,
 // it applies the objects that are new or modified.
 func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
-	sort.Sort(ApplyOrder(objects))
+	sort.Sort(objectutil.ApplyOrder(objects))
 	changeSet := NewChangeSet()
 	var toApply []*unstructured.Unstructured
 	for _, object := range objects {
 		existingObject := object.DeepCopy()
-		_ = kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+		_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 		dryRunObject := object.DeepCopy()
 		if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
 			if force && strings.Contains(err.Error(), "immutable") {
-				if err := kc.kubeClient.Delete(ctx, existingObject); err != nil {
+				if err := kc.client.Delete(ctx, existingObject); err != nil {
 					return nil, fmt.Errorf("%s immutable field detected, failed to delete object, error: %w",
-						kc.fmt.Unstructured(dryRunObject), err)
+						objectutil.FmtUnstructured(dryRunObject), err)
 				}
 				return kc.ApplyAll(ctx, objects, force)
 			}
@@ -103,7 +104,7 @@ func (kc *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured
 	for _, object := range toApply {
 		appliedObject := object.DeepCopy()
 		if err := kc.apply(ctx, appliedObject); err != nil {
-			return nil, fmt.Errorf("%s apply failed, error: %w", kc.fmt.Unstructured(appliedObject), err)
+			return nil, fmt.Errorf("%s apply failed, error: %w", objectutil.FmtUnstructured(appliedObject), err)
 		}
 	}
 
@@ -124,7 +125,7 @@ func (kc *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstru
 	var stageTwo []*unstructured.Unstructured
 
 	for _, u := range objects {
-		if IsClusterDefinition(u.GetKind()) {
+		if objectutil.IsClusterDefinition(u.GetKind()) {
 			stageOne = append(stageOne, u)
 		} else {
 			stageTwo = append(stageTwo, u)
@@ -156,15 +157,15 @@ func (kc *ResourceManager) dryRunApply(ctx context.Context, object *unstructured
 	opts := []client.PatchOption{
 		client.DryRunAll,
 		client.ForceOwnership,
-		client.FieldOwner(kc.fieldOwner),
+		client.FieldOwner(kc.owner.Field),
 	}
-	return kc.kubeClient.Patch(ctx, object, client.Apply, opts...)
+	return kc.client.Patch(ctx, object, client.Apply, opts...)
 }
 
 func (kc *ResourceManager) apply(ctx context.Context, object *unstructured.Unstructured) error {
 	opts := []client.PatchOption{
 		client.ForceOwnership,
-		client.FieldOwner(kc.fieldOwner),
+		client.FieldOwner(kc.owner.Field),
 	}
-	return kc.kubeClient.Patch(ctx, object, client.Apply, opts...)
+	return kc.client.Patch(ctx, object, client.Apply, opts...)
 }

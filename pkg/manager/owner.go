@@ -15,10 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package inventory contains utilities for keeping a record of Kubernetes objects applied on a cluster.
-//
-// The InventoryManager performs the following actions:
-// - records the Kubernetes objects metadata in a compacted format
-// - stores the inventory in a Kubernetes ConfigMap
-// - determines which objects are subject to garbage collection
-package inventory
+package manager
+
+// Owner contains options for setting the field manager and ownership labels group.
+// The ownership labels are in the format:
+// 	<Group>/name: <Name>
+// 	<Group>/namespace: <Namespace>
+type Owner struct {
+	// Field sets the field manager name for the given server-side apply patch.
+	Field string
+
+	// Group sets the owner label key prefix.
+	Group string
+}

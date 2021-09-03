@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package resmgr contains utilities for managing Kubernetes resources.
+// Package manager contains utilities for managing Kubernetes resources.
 //
 // The ResourceManager performs the following actions:
 // - orders the Kubernetes objects for apply (CRDs, Namespaces, ClusterRoles first)
@@ -25,4 +25,4 @@ limitations under the License.
 // - waits for the objects to be fully reconciled by looking up their readiness status
 // - deletes objects that are subject to garbage collection
 // - waits for the deleted objects to be terminated
-package resmgr
+package manager

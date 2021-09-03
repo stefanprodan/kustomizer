@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package objectutil
 
 import (
 	"strings"
@@ -26,33 +26,24 @@ import (
 
 const fmtSeparator = "/"
 
-type ResourceFormatter struct {
-	Separator string
-}
-
-func (rf *ResourceFormatter) ObjMetadata(obj object.ObjMetadata) string {
+// FmtObjMetadata returns the object ID in the format <kind>/<namespace>/<name>.
+func FmtObjMetadata(obj object.ObjMetadata) string {
 	var builder strings.Builder
-	builder.WriteString(obj.GroupKind.Kind + rf.getSeparator())
+	builder.WriteString(obj.GroupKind.Kind + fmtSeparator)
 	if obj.Namespace != "" {
-		builder.WriteString(obj.Namespace + rf.getSeparator())
+		builder.WriteString(obj.Namespace + fmtSeparator)
 	}
 	builder.WriteString(obj.Name)
 	return builder.String()
 }
 
-func (rf *ResourceFormatter) Unstructured(obj *unstructured.Unstructured) string {
-	return rf.ObjMetadata(object.UnstructuredToObjMeta(obj))
+// FmtUnstructured returns the object ID in the format <kind>/<namespace>/<name>.
+func FmtUnstructured(obj *unstructured.Unstructured) string {
+	return FmtObjMetadata(object.UnstructuredToObjMeta(obj))
 }
 
-func (rf *ResourceFormatter) getSeparator() string {
-	if rf.Separator == "" {
-		return fmtSeparator
-	}
-
-	return rf.Separator
-}
-
-func (rf *ResourceFormatter) MaskSecret(object *unstructured.Unstructured, mask string) (*unstructured.Unstructured, error) {
+// MaskSecret replaces the data key values with the given mask.
+func MaskSecret(object *unstructured.Unstructured, mask string) (*unstructured.Unstructured, error) {
 	data, found, err := unstructured.NestedMap(object.Object, "data")
 	if err != nil {
 		return nil, err

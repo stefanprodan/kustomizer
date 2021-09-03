@@ -17,14 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
 )
 
 var VERSION = "1.0.0-dev.0"
@@ -46,10 +46,9 @@ type rootFlags struct {
 }
 
 var (
-	rootArgs          = rootFlags{}
-	logger            = stderrLogger{stderr: os.Stderr}
-	resourceFormatter = &resmgr.ResourceFormatter{}
-	inventoryMgr      *inventory.InventoryManager
+	rootArgs     = rootFlags{}
+	logger       = stderrLogger{stderr: os.Stderr}
+	inventoryMgr *inventory.InventoryManager
 )
 
 func init() {

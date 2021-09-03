@@ -1,9 +1,10 @@
-package resmgr
+package manager
 
 import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"sort"
 	"testing"
 	"time"
@@ -35,10 +36,10 @@ func TestApply(t *testing.T) {
 		}
 
 		// expected created order
-		sort.Sort(ApplyOrder(objects))
+		sort.Sort(objectutil.ApplyOrder(objects))
 		var expected []string
 		for _, object := range objects {
-			expected = append(expected, manager.fmt.Unstructured(object))
+			expected = append(expected, objectutil.FmtUnstructured(object))
 		}
 
 		// verify the change set contains only created actions
@@ -67,7 +68,7 @@ func TestApply(t *testing.T) {
 		var output []string
 		for _, entry := range changeSet.Entries {
 			if diff := cmp.Diff(string(UnchangedAction), entry.Action); diff != "" {
-				t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
+				t.Errorf("Mismatch from expected value (-want +got):\n%s\n%v", diff, changeSet)
 			}
 			output = append(output, entry.Subject)
 		}
@@ -101,7 +102,7 @@ func TestApply(t *testing.T) {
 
 		// get the configmap from cluster
 		configMapClone := configMap.DeepCopy()
-		err = manager.kubeClient.Get(ctx, client.ObjectKeyFromObject(configMapClone), configMapClone)
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(configMapClone), configMapClone)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -161,7 +162,7 @@ func TestApply(t *testing.T) {
 		}
 
 		// verify that the error message does not contain sensitive information
-		expectedErr := fmt.Sprintf("%s is invalid, error: secret is immutable", manager.fmt.Unstructured(secret))
+		expectedErr := fmt.Sprintf("%s is invalid, error: secret is immutable", objectutil.FmtUnstructured(secret))
 		if diff := cmp.Diff(expectedErr, err.Error()); diff != "" {
 			t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
 		}
@@ -189,7 +190,7 @@ func TestApply(t *testing.T) {
 
 		// get the secret from cluster
 		secretClone := secret.DeepCopy()
-		err = manager.kubeClient.Get(ctx, client.ObjectKeyFromObject(secretClone), secretClone)
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(secretClone), secretClone)
 		if err != nil {
 			t.Fatal(err)
 		}

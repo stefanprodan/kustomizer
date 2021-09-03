@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package objectutil
 
 import (
 	"strings"
@@ -25,7 +25,7 @@ import (
 
 // ApplyOrder implements the Sort interface for Kubernetes objects based on kind.
 // When creating objects: CRDs, namespaces and other global kinds go first, while webhooks go last.
-// When deleting objects: the order is inverted to allow the Kubernetes controllers to finalize custom resources.
+// When deleting objects: the order should be inverted to allow the Kubernetes controllers to finalize custom resources.
 type ApplyOrder []*unstructured.Unstructured
 
 func (objects ApplyOrder) Len() int {

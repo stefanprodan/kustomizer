@@ -21,18 +21,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	apiruntime "k8s.io/apimachinery/pkg/runtime"
-	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 // InventoryManager records the Kubernetes objects that are applied on the cluster.
@@ -54,17 +49,6 @@ func NewInventoryManager(fieldOwner, group string) (*InventoryManager, error) {
 		fieldOwner: fieldOwner,
 		group:      group,
 	}, nil
-}
-
-// Record creates an Inventory of the given objects.
-func (im *InventoryManager) Record(objects []*unstructured.Unstructured) (*Inventory, error) {
-	inventory := NewInventory()
-
-	if err := inventory.Add(objects); err != nil {
-		return nil, err
-	}
-
-	return inventory, nil
 }
 
 // Store applies the Inventory object on the server.
@@ -103,7 +87,7 @@ func (im *InventoryManager) Retrieve(ctx context.Context, kubeClient client.Clie
 		return nil, fmt.Errorf("inventory data not found in ConfigMap/%s", cmKey)
 	}
 
-	var entries map[string]string
+	var entries []Entry
 	err = json.Unmarshal([]byte(cm.Data["inventory"]), &entries)
 	if err != nil {
 		return nil, err
@@ -141,86 +125,6 @@ func (im *InventoryManager) Remove(ctx context.Context, kubeClient client.Client
 		return fmt.Errorf("failed to delete ConfigMap/%s, error: %w", cmKey, err)
 	}
 	return nil
-}
-
-// Read decodes a YAML or JSON document from the given reader into an unstructured Kubernetes API object.
-func (im *InventoryManager) Read(r io.Reader) (*unstructured.Unstructured, error) {
-	reader := yamlutil.NewYAMLOrJSONDecoder(r, 2048)
-	obj := &unstructured.Unstructured{}
-	err := reader.Decode(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj, nil
-}
-
-// ReadAll decodes the YAML or JSON documents from the given reader into unstructured Kubernetes API objects.
-func (im *InventoryManager) ReadAll(r io.Reader) ([]*unstructured.Unstructured, error) {
-	reader := yamlutil.NewYAMLOrJSONDecoder(r, 2048)
-	objects := make([]*unstructured.Unstructured, 0)
-
-	for {
-		obj := &unstructured.Unstructured{}
-		err := reader.Decode(obj)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-				break
-			}
-			return objects, err
-		}
-
-		if obj.IsList() {
-			err = obj.EachListItem(func(item apiruntime.Object) error {
-				obj := item.(*unstructured.Unstructured)
-				objects = append(objects, obj)
-				return nil
-			})
-			if err != nil {
-				return objects, err
-			}
-			continue
-		}
-
-		objects = append(objects, obj)
-	}
-
-	return objects, nil
-}
-
-// ToYAML encodes the given Kubernetes API objects to a YAML multi-doc.
-func (im *InventoryManager) ToYAML(objects []*unstructured.Unstructured) (string, error) {
-	var builder strings.Builder
-	for _, obj := range objects {
-		data, err := yaml.Marshal(obj)
-		if err != nil {
-			return "", err
-		}
-		builder.Write(data)
-		builder.WriteString("---\n")
-	}
-	return builder.String(), nil
-}
-
-// ToJSON encodes the given Kubernetes API objects to a YAML multi-doc.
-func (im *InventoryManager) ToJSON(objects []*unstructured.Unstructured) (string, error) {
-	list := struct {
-		ApiVersion string                       `json:"apiVersion,omitempty"`
-		Kind       string                       `json:"kind,omitempty"`
-		Items      []*unstructured.Unstructured `json:"items,omitempty"`
-	}{
-		ApiVersion: "v1",
-		Kind:       "ListMeta",
-		Items:      objects,
-	}
-
-	data, err := json.MarshalIndent(list, "", "    ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
 }
 
 func (im *InventoryManager) newConfigMap(name, namespace string) *corev1.ConfigMap {

@@ -15,49 +15,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package manager
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 // ResourceManager reconciles Kubernetes resources onto the target cluster.
 type ResourceManager struct {
-	kubeClient    client.WithWatch
-	kstatusPoller *polling.StatusPoller
-	fmt           *ResourceFormatter
-	fieldOwner    string
+	client client.Client
+	poller *polling.StatusPoller
+	owner  Owner
 }
 
 // NewResourceManager creates a ResourceManager for the given Kubernetes client config and context.
-func NewResourceManager(kubeConfigPath, kubeContext, fieldOwner string) (*ResourceManager, error) {
-	kubeClient, err := newKubeClient(kubeConfigPath, kubeContext)
-	if err != nil {
-		return nil, fmt.Errorf("client init failed: %w", err)
-	}
-
-	statusPoller, err := newKubeStatusPoller(kubeConfigPath, kubeContext)
-	if err != nil {
-		return nil, fmt.Errorf("status poller init failed: %w", err)
-	}
-
+func NewResourceManager(client client.Client, poller *polling.StatusPoller, owner Owner) *ResourceManager {
 	return &ResourceManager{
-		kubeClient:    kubeClient,
-		kstatusPoller: statusPoller,
-		fmt:           &ResourceFormatter{},
-		fieldOwner:    fieldOwner,
-	}, nil
+		client: client,
+		poller: poller,
+		owner:  owner,
+	}
 }
 
 // KubeClient returns the underlying controller-runtime client.
 func (kc *ResourceManager) KubeClient() client.Client {
-	return kc.kubeClient
+	return kc.client
 }
 
 func (kc *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
-	return &ChangeSetEntry{Subject: kc.fmt.Unstructured(object), Action: string(action)}
+	return &ChangeSetEntry{Subject: objectutil.FmtUnstructured(object), Action: string(action)}
 }
+
+//func (kc *ResourceManager) SetOwnerLabels(objects []*unstructured.Unstructured, name, namespace string) {
+//	for _, object := range objects {
+//		object.SetLabels(map[string]string{
+//			kc.fieldOwner + "/name":      name,
+//			kc.fieldOwner + "/namespace": namespace,
+//		})
+//	}
+//}

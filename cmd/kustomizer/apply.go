@@ -22,7 +22,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/pkg/manager"
 )
 
 var applyCmd = &cobra.Command{
@@ -77,16 +78,26 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	newInventory, err := inventoryMgr.Record(objects)
-	if err != nil {
+	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
 	logger.Println(fmt.Sprintf("applying %v manifest(s)...", len(objects)))
 
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
+	kubeClient, err := newKubeClient(rootArgs.kubeconfig, rootArgs.kubecontext)
 	if err != nil {
-		return err
+		return fmt.Errorf("client init failed: %w", err)
 	}
+
+	statusPoller, err := newKubeStatusPoller(rootArgs.kubeconfig, rootArgs.kubecontext)
+	if err != nil {
+		return fmt.Errorf("status poller init failed: %w", err)
+	}
+
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
+		Field: PROJECT,
+		Group: PROJECT + ".dev",
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()

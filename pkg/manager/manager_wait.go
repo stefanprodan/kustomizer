@@ -15,11 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package manager
 
 import (
 	"context"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"strings"
 	"time"
 
@@ -47,7 +48,7 @@ func (kc *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, 
 		PollInterval: interval,
 		UseCache:     true,
 	}
-	eventsChan := kc.kstatusPoller.Poll(ctx, objectsMeta, opts)
+	eventsChan := kc.poller.Poll(ctx, objectsMeta, opts)
 
 	lastStatus := make(map[object.ObjMetadata]*event.ResourceStatus)
 
@@ -82,13 +83,13 @@ func (kc *ResourceManager) Wait(objects []*unstructured.Unstructured, interval, 
 		var errors = []string{}
 		for id, rs := range statusCollector.ResourceStatuses {
 			if rs == nil {
-				errors = append(errors, fmt.Sprintf("can't determine status for %s", kc.fmt.ObjMetadata(id)))
+				errors = append(errors, fmt.Sprintf("can't determine status for %s", objectutil.FmtObjMetadata(id)))
 				continue
 			}
 			if lastStatus[id].Status != status.CurrentStatus {
 				var builder strings.Builder
 				builder.WriteString(fmt.Sprintf("%s status: '%s'",
-					kc.fmt.ObjMetadata(rs.Identifier), lastStatus[id].Status))
+					objectutil.FmtObjMetadata(rs.Identifier), lastStatus[id].Status))
 				if rs.Error != nil {
 					builder.WriteString(fmt.Sprintf(": %s", rs.Error))
 				}
@@ -117,7 +118,7 @@ func (kc *ResourceManager) WaitForTermination(objects []*unstructured.Unstructur
 func (kc *ResourceManager) isDeleted(ctx context.Context, object *unstructured.Unstructured) wait.ConditionFunc {
 	return func() (bool, error) {
 		obj := object.DeepCopy()
-		err := kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+		err := kc.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

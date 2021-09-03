@@ -23,7 +23,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/stefanprodan/kustomizer/pkg/resmgr"
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/pkg/manager"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var diffCmd = &cobra.Command{
@@ -64,15 +66,25 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	newInventory, err := inventoryMgr.Record(objects)
-	if err != nil {
+	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
 
-	resMgr, err := resmgr.NewResourceManager(rootArgs.kubeconfig, rootArgs.kubecontext, PROJECT)
+	kubeClient, err := newKubeClient(rootArgs.kubeconfig, rootArgs.kubecontext)
 	if err != nil {
-		return err
+		return fmt.Errorf("client init failed: %w", err)
 	}
+
+	statusPoller, err := newKubeStatusPoller(rootArgs.kubeconfig, rootArgs.kubecontext)
+	if err != nil {
+		return fmt.Errorf("status poller init failed: %w", err)
+	}
+
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
+		Field: PROJECT,
+		Group: PROJECT + ".dev",
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
@@ -86,11 +98,11 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		if change.Action == string(resmgr.CreatedAction) {
+		if change.Action == string(manager.CreatedAction) {
 			fmt.Println(`►`, change.Subject, "created")
 		}
 
-		if change.Action == string(resmgr.ConfiguredAction) {
+		if change.Action == string(manager.ConfiguredAction) {
 			fmt.Println(`►`, change.Subject, "drifted")
 			fmt.Println(change.Diff)
 		}
@@ -104,7 +116,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		for _, object := range staleObjects {
-			fmt.Println(`►`, fmt.Sprintf("%s deleted", resourceFormatter.Unstructured(object)))
+			fmt.Println(`►`, fmt.Sprintf("%s deleted", objectutil.FmtUnstructured(object)))
 		}
 	}
 

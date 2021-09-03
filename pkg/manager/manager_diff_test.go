@@ -1,4 +1,4 @@
-package resmgr
+package manager
 
 import (
 	"context"

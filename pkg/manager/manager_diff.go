@@ -15,11 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resmgr
+package manager
 
 import (
 	"context"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,7 +35,7 @@ import (
 // If the diff contains Kubernetes Secrets, the data values are masked.
 func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstructured) (*ChangeSetEntry, error) {
 	existingObject := object.DeepCopy()
-	_ = kc.kubeClient.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
+	_ = kc.client.Get(ctx, client.ObjectKeyFromObject(object), existingObject)
 
 	dryRunObject := object.DeepCopy()
 	if err := kc.dryRunApply(ctx, dryRunObject); err != nil {
@@ -52,12 +53,12 @@ func (kc *ResourceManager) Diff(ctx context.Context, object *unstructured.Unstru
 		unstructured.RemoveNestedField(existingObject.Object, "metadata", "managedFields")
 
 		if dryRunObject.GetKind() == "Secret" {
-			d, err := kc.fmt.MaskSecret(dryRunObject, "******")
+			d, err := objectutil.MaskSecret(dryRunObject, "******")
 			if err != nil {
 				return nil, fmt.Errorf("masking secret data failed, error: %w", err)
 			}
 			dryRunObject = d
-			ex, err := kc.fmt.MaskSecret(existingObject, "*****")
+			ex, err := objectutil.MaskSecret(existingObject, "*****")
 			if err != nil {
 				return nil, fmt.Errorf("masking secret data failed, error: %w", err)
 			}
@@ -110,7 +111,7 @@ func (kc *ResourceManager) hasDrifted(existingObject, dryRunObject *unstructured
 // if the error was caused by an invalid Kubernetes secrets.
 func (kc *ResourceManager) validationError(object *unstructured.Unstructured, err error) error {
 	if apierrors.IsNotFound(err) {
-		return fmt.Errorf("%s namespace not specified, error: %w", kc.fmt.Unstructured(object), err)
+		return fmt.Errorf("%s namespace not specified, error: %w", objectutil.FmtUnstructured(object), err)
 	}
 
 	if object.GetKind() == "Secret" {
@@ -118,9 +119,9 @@ func (kc *ResourceManager) validationError(object *unstructured.Unstructured, er
 		if strings.Contains(err.Error(), "immutable") {
 			msg = "secret is immutable"
 		}
-		return fmt.Errorf("%s is invalid, error: %s", kc.fmt.Unstructured(object), msg)
+		return fmt.Errorf("%s is invalid, error: %s", objectutil.FmtUnstructured(object), msg)
 	}
 
-	return fmt.Errorf("%s is invalid, error: %w", kc.fmt.Unstructured(object), err)
+	return fmt.Errorf("%s is invalid, error: %w", objectutil.FmtUnstructured(object), err)
 
 }
