@@ -21,8 +21,8 @@ func TestDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configMapName, configMap := getObjectFrom(objects, "ConfigMap", id)
-	secretName, secret := getObjectFrom(objects, "Secret", id)
+	configMapName, configMap := getFirstObject(objects, "ConfigMap", id)
+	secretName, secret := getFirstObject(objects, "Secret", id)
 
 	if err := unstructured.SetNestedField(secret.Object, false, "immutable"); err != nil {
 		t.Fatal(err)

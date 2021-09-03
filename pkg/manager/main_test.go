@@ -93,7 +93,7 @@ func generateName(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, id)
 }
 
-func getObjectFrom(objects []*unstructured.Unstructured, kind, name string) (string, *unstructured.Unstructured) {
+func getFirstObject(objects []*unstructured.Unstructured, kind, name string) (string, *unstructured.Unstructured) {
 	for _, object := range objects {
 		if object.GetKind() == kind && object.GetName() == name {
 			return objectutil.FmtUnstructured(object), object

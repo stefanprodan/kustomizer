@@ -35,6 +35,9 @@ test: tidy fmt vet install-envtest
 test-race: tidy fmt vet install-envtest
 	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -race -parallel 4 -coverprofile cover.out
 
+test-bench:
+	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -bench=. -run=none
+
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
 else

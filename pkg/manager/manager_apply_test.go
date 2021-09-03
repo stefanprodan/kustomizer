@@ -27,8 +27,8 @@ func TestApply(t *testing.T) {
 
 	manager.SetOwnerLabels(objects, "app1", "default")
 
-	configMapName, configMap := getObjectFrom(objects, "ConfigMap", id)
-	secretName, secret := getObjectFrom(objects, "Secret", id)
+	configMapName, configMap := getFirstObject(objects, "ConfigMap", id)
+	secretName, secret := getFirstObject(objects, "Secret", id)
 
 	t.Run("creates objects in order", func(t *testing.T) {
 		// create objects

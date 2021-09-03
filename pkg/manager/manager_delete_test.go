@@ -23,10 +23,10 @@ func TestDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, role := getObjectFrom(objects, "ClusterRole", id)
-	_, binding := getObjectFrom(objects, "ClusterRoleBinding", id)
-	_, configMap := getObjectFrom(objects, "ConfigMap", id)
-	_, secret := getObjectFrom(objects, "Secret", id)
+	_, role := getFirstObject(objects, "ClusterRole", id)
+	_, binding := getFirstObject(objects, "ClusterRoleBinding", id)
+	_, configMap := getFirstObject(objects, "ConfigMap", id)
+	_, secret := getFirstObject(objects, "Secret", id)
 
 	if _, err = manager.ApplyAllStaged(ctx, objects, false, timeout); err != nil {
 		t.Fatal(err)
