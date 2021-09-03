@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"os"
 	"sort"
 	"time"
@@ -74,13 +75,10 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
-		Field: PROJECT,
-		Group: PROJECT + ".dev",
-	})
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 
-	inv, err := inventoryMgr.Retrieve(ctx, kubeClient, deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
-	if err != nil {
+	inv := inventory.NewInventory(deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
+	if err := resMgr.GetInventory(ctx, inv); err != nil {
 		return err
 	}
 
@@ -106,8 +104,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	err = inventoryMgr.Remove(ctx, resMgr.KubeClient(), deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
-	if err != nil {
+	if err := resMgr.DeleteInventory(ctx, inv); err != nil {
 		return err
 	}
 

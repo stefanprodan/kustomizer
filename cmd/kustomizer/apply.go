@@ -94,10 +94,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
-		Field: PROJECT,
-		Group: PROJECT + ".dev",
-	})
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 
 	resMgr.SetOwnerLabels(objects, applyArgs.inventoryName, applyArgs.inventoryNamespace)
 
@@ -133,12 +130,12 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("mode not supported")
 	}
 
-	staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	staleObjects, err := resMgr.GetInventoryStaleObjects(ctx, newInventory)
 	if err != nil {
 		return fmt.Errorf("inventory query failed, error: %w", err)
 	}
 
-	err = inventoryMgr.Store(ctx, resMgr.KubeClient(), newInventory, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	err = resMgr.ApplyInventory(ctx, newInventory)
 	if err != nil {
 		return fmt.Errorf("inventory apply failed, error: %w", err)
 	}

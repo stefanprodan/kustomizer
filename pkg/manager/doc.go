@@ -25,4 +25,6 @@ limitations under the License.
 // - waits for the objects to be fully reconciled by looking up their readiness status
 // - deletes objects that are subject to garbage collection
 // - waits for the deleted objects to be terminated
+// - maintains an inventory of objects applied on the cluster
+// - performs garbage collection of stale objects based on the inventory entries
 package manager

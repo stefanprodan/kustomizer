@@ -32,7 +32,7 @@ type ResourceManager struct {
 	owner  Owner
 }
 
-// NewResourceManager creates a ResourceManager for the given Kubernetes client config and context.
+// NewResourceManager creates a ResourceManager for the given Kubernetes client.
 func NewResourceManager(client client.Client, poller *polling.StatusPoller, owner Owner) *ResourceManager {
 	return &ResourceManager{
 		client: client,
@@ -41,13 +41,9 @@ func NewResourceManager(client client.Client, poller *polling.StatusPoller, owne
 	}
 }
 
-// KubeClient returns the underlying controller-runtime client.
-func (m *ResourceManager) KubeClient() client.Client {
+// Client returns the underlying controller-runtime client.
+func (m *ResourceManager) Client() client.Client {
 	return m.client
-}
-
-func (m *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
-	return &ChangeSetEntry{Subject: objectutil.FmtUnstructured(object), Action: string(action)}
 }
 
 // SetOwnerLabels adds the ownership labels to the given objects.
@@ -61,4 +57,8 @@ func (m *ResourceManager) SetOwnerLabels(objects []*unstructured.Unstructured, n
 			m.owner.Group + "/namespace": namespace,
 		})
 	}
+}
+
+func (m *ResourceManager) changeSetEntry(object *unstructured.Unstructured, action Action) *ChangeSetEntry {
+	return &ChangeSetEntry{Subject: objectutil.FmtUnstructured(object), Action: string(action)}
 }

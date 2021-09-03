@@ -17,14 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"github.com/stefanprodan/kustomizer/pkg/manager"
 	"os"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 )
 
 var VERSION = "1.0.0-dev.0"
@@ -46,9 +45,12 @@ type rootFlags struct {
 }
 
 var (
-	rootArgs     = rootFlags{}
-	logger       = stderrLogger{stderr: os.Stderr}
-	inventoryMgr *inventory.InventoryManager
+	rootArgs       = rootFlags{}
+	logger         = stderrLogger{stderr: os.Stderr}
+	inventoryOwner = manager.Owner{
+		Field: "kustomizer",
+		Group: "inventory.kustomizer.dev",
+	}
 )
 
 func init() {
@@ -65,12 +67,6 @@ func init() {
 func main() {
 	configureKubeconfig()
 
-	if im, err := inventory.NewInventoryManager(PROJECT, PROJECT+".dev"); err != nil {
-		panic(err)
-	} else {
-		inventoryMgr = im
-	}
-
 	if err := rootCmd.Execute(); err != nil {
 		logger.Println(`✗`, err)
 		os.Exit(1)
@@ -84,7 +80,7 @@ func configureKubeconfig() {
 		rootArgs.kubeconfig = os.Getenv("KUBECONFIG")
 	default:
 		if home := homeDir(); len(home) > 0 {
-			rootArgs.kubeconfig = filepath.Join(home, ".kube", "config")
+			rootArgs.kubeconfig = path.Join(home, ".kube", "config")
 		}
 	}
 }

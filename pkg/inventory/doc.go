@@ -16,9 +16,4 @@ limitations under the License.
 */
 
 // Package inventory contains utilities for keeping a record of Kubernetes objects applied on a cluster.
-//
-// The InventoryManager performs the following actions:
-// - records the Kubernetes objects metadata in a compacted format
-// - stores the inventory in a Kubernetes ConfigMap
-// - determines which objects are subject to garbage collection
 package inventory

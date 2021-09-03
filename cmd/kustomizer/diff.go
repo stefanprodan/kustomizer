@@ -66,7 +66,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	newInventory := inventory.NewInventory(diffArgs.inventoryName, diffArgs.inventoryNamespace)
 	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
@@ -81,10 +81,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, manager.Owner{
-		Field: PROJECT,
-		Group: PROJECT + ".dev",
-	})
+	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
@@ -114,7 +111,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if diffArgs.inventoryName != "" {
-		staleObjects, err := inventoryMgr.GetStaleObjects(ctx, resMgr.KubeClient(), newInventory, diffArgs.inventoryName, diffArgs.inventoryNamespace)
+		staleObjects, err := resMgr.GetInventoryStaleObjects(ctx, newInventory)
 		if err != nil {
 			return fmt.Errorf("inventory query failed, error: %w", err)
 		}
