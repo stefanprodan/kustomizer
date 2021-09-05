@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,7 +39,7 @@ func TestApply(t *testing.T) {
 		}
 
 		// expected created order
-		sort.Sort(objectutil.ApplyOrder(objects))
+		sort.Sort(ordering.SortableUnstructureds(objects))
 		var expected []string
 		for _, object := range objects {
 			expected = append(expected, objectutil.FmtUnstructured(object))
@@ -164,7 +165,7 @@ func TestApply(t *testing.T) {
 		}
 
 		// verify that the error message does not contain sensitive information
-		expectedErr := fmt.Sprintf("%s is invalid, error: secret is immutable", objectutil.FmtUnstructured(secret))
+		expectedErr := fmt.Sprintf("%s invalid, error: secret is immutable", objectutil.FmtUnstructured(secret))
 		if diff := cmp.Diff(expectedErr, err.Error()); diff != "" {
 			t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
 		}

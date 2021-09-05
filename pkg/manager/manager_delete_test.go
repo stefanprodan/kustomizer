@@ -3,12 +3,12 @@ package manager
 import (
 	"context"
 	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -23,24 +23,22 @@ func TestDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, role := getFirstObject(objects, "ClusterRole", id)
-	_, binding := getFirstObject(objects, "ClusterRoleBinding", id)
 	_, configMap := getFirstObject(objects, "ConfigMap", id)
-	_, secret := getFirstObject(objects, "Secret", id)
+	_, role := getFirstObject(objects, "ClusterRole", id)
 
 	if _, err = manager.ApplyAllStaged(ctx, objects, false, timeout); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("deletes objects in order", func(t *testing.T) {
-		changeSet, err := manager.DeleteAll(ctx, []*unstructured.Unstructured{binding, configMap})
+		changeSet, err := manager.DeleteAll(ctx, objects)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// expected deleted order
 		var expected []string
-		for _, object := range []*unstructured.Unstructured{configMap, binding} {
+		for _, object := range objects {
 			expected = append(expected, objectutil.FmtUnstructured(object))
 		}
 
@@ -64,28 +62,24 @@ func TestDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bindingClone := binding.DeepCopy()
-		err = manager.client.Get(ctx, client.ObjectKeyFromObject(bindingClone), bindingClone)
+		roleClone := role.DeepCopy()
+		err = manager.client.Get(ctx, client.ObjectKeyFromObject(roleClone), roleClone)
 		if !apierrors.IsNotFound(err) {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("waits for objects termination", func(t *testing.T) {
-		set := []*unstructured.Unstructured{role, secret}
-		_, err := manager.DeleteAll(ctx, set)
+		_, err := manager.DeleteAll(ctx, objects)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if err := manager.WaitForTermination(set, time.Second, 5*time.Second); err != nil {
-			t.Fatal(err)
-		}
-
-		secretClone := secret.DeepCopy()
-		err = manager.client.Get(ctx, client.ObjectKeyFromObject(secretClone), secretClone)
-		if !apierrors.IsNotFound(err) {
-			t.Fatal(err)
+		if err := manager.WaitForTermination(objects, time.Second, 5*time.Second); err != nil {
+			// workaround for https://github.com/kubernetes-sigs/controller-runtime/issues/880
+			if !strings.Contains(err.Error(), "Namespace/") {
+				t.Fatal(err)
+			}
 		}
 	})
 }

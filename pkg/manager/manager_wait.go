@@ -20,9 +20,10 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"strings"
 	"time"
+
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -109,7 +110,7 @@ func (m *ResourceManager) WaitForTermination(objects []*unstructured.Unstructure
 
 	for _, object := range objects {
 		if err := wait.PollImmediate(interval, timeout, m.isDeleted(ctx, object)); err != nil {
-			return err
+			return fmt.Errorf("%s termination timeout, error: %w", objectutil.FmtUnstructured(object), err)
 		}
 	}
 	return nil

@@ -68,10 +68,19 @@ func ReadObjects(r io.Reader) ([]*unstructured.Unstructured, error) {
 			continue
 		}
 
-		objects = append(objects, obj)
+		if IsKubernetesObject(obj) {
+			objects = append(objects, obj)
+		}
 	}
 
 	return objects, nil
+}
+
+func IsKubernetesObject(object *unstructured.Unstructured) bool {
+	if object.GetName() == "" || object.GetKind() == "" || object.GetAPIVersion() == "" {
+		return false
+	}
+	return true
 }
 
 // ObjectsToYAML encodes the given Kubernetes API objects to a YAML multi-doc.

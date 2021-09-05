@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -125,7 +126,7 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 		}
 	}
 
-	sort.Sort(objectutil.ApplyOrder(objects))
+	sort.Sort(ordering.SortableUnstructureds(objects))
 	return objects, nil
 }
 

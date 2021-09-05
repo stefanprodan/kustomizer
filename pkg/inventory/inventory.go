@@ -23,8 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
-
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
 // Inventory is a record of objects that are applied on a cluster stored as a configmap.
@@ -39,9 +38,14 @@ type Inventory struct {
 	Entries []Entry `json:"entries"`
 }
 
-// Entry is a record of a Kubernetes object metadata.
+// Entry contains the information necessary to locate the
+// resource within a cluster.
 type Entry struct {
-	ObjectID      string `json:"id"`
+	// ObjectID is the string representation of object.ObjMetadata,
+	// in the format '<namespace>_<name>_<group>_<kind>'.
+	ObjectID string `json:"id"`
+
+	// ObjectVersion is the API version of this entry kind.
 	ObjectVersion string `json:"ver"`
 }
 
@@ -55,7 +59,7 @@ func NewInventory(name, namespace string) *Inventory {
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.
 func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
-	sort.Sort(objectutil.ApplyOrder(objects))
+	sort.Sort(ordering.SortableUnstructureds(objects))
 	for _, om := range objects {
 		objMetadata := object.UnstructuredToObjMeta(om)
 		gv, err := schema.ParseGroupVersion(om.GetAPIVersion())
@@ -103,7 +107,7 @@ func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 		objects = append(objects, u)
 	}
 
-	sort.Sort(objectutil.ApplyOrder(objects))
+	sort.Sort(ordering.SortableUnstructureds(objects))
 	return objects, nil
 }
 
@@ -151,6 +155,6 @@ func (inv *Inventory) Diff(target *Inventory) ([]*unstructured.Unstructured, err
 		objects = append(objects, u)
 	}
 
-	sort.Sort(objectutil.ApplyOrder(objects))
+	sort.Sort(ordering.SortableUnstructureds(objects))
 	return objects, nil
 }

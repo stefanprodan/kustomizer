@@ -19,15 +19,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"os"
 	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/cli-utils/pkg/ordering"
 
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var deleteCmd = &cobra.Command{
@@ -89,7 +89,7 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 
 	logger.Println(fmt.Sprintf("deleting %v manifest(s)...", len(objects)))
 	hasErrors := false
-	sort.Sort(sort.Reverse(objectutil.ApplyOrder(objects)))
+	sort.Sort(sort.Reverse(ordering.SortableUnstructureds(objects)))
 	for _, object := range objects {
 		change, err := resMgr.Delete(ctx, object)
 		if err != nil {

@@ -20,12 +20,13 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -114,14 +115,22 @@ func (m *ResourceManager) validationError(object *unstructured.Unstructured, err
 		return fmt.Errorf("%s namespace not specified, error: %w", objectutil.FmtUnstructured(object), err)
 	}
 
+	reason := fmt.Sprintf("%v", apierrors.ReasonForError(err))
+
 	if object.GetKind() == "Secret" {
 		msg := "data values must be of type string"
 		if strings.Contains(err.Error(), "immutable") {
 			msg = "secret is immutable"
 		}
-		return fmt.Errorf("%s is invalid, error: %s", objectutil.FmtUnstructured(object), msg)
+		return fmt.Errorf("%s %s, error: %s", objectutil.FmtUnstructured(object), strings.ToLower(reason), msg)
 	}
 
-	return fmt.Errorf("%s is invalid, error: %w", objectutil.FmtUnstructured(object), err)
+	// detect managed field conflict
+	if status, ok := apierrors.StatusCause(err, metav1.CauseTypeFieldManagerConflict); ok {
+		reason = fmt.Sprintf("%v", status.Type)
+	}
+
+	return fmt.Errorf("%s dry-run falied, reason: %s, error: %w",
+		objectutil.FmtUnstructured(object), reason, err)
 
 }
