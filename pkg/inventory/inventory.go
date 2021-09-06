@@ -20,10 +20,11 @@ package inventory
 import (
 	"sort"
 
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
 // Inventory is a record of objects that are applied on a cluster stored as a configmap.
@@ -59,7 +60,7 @@ func NewInventory(name, namespace string) *Inventory {
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.
 func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
-	sort.Sort(ordering.SortableUnstructureds(objects))
+	sort.Sort(objectutil.SortableUnstructureds(objects))
 	for _, om := range objects {
 		objMetadata := object.UnstructuredToObjMeta(om)
 		gv, err := schema.ParseGroupVersion(om.GetAPIVersion())
@@ -107,7 +108,7 @@ func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 		objects = append(objects, u)
 	}
 
-	sort.Sort(ordering.SortableUnstructureds(objects))
+	sort.Sort(objectutil.SortableUnstructureds(objects))
 	return objects, nil
 }
 
@@ -155,6 +156,6 @@ func (inv *Inventory) Diff(target *Inventory) ([]*unstructured.Unstructured, err
 		objects = append(objects, u)
 	}
 
-	sort.Sort(ordering.SortableUnstructureds(objects))
+	sort.Sort(objectutil.SortableUnstructureds(objects))
 	return objects, nil
 }

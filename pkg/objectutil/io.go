@@ -68,7 +68,7 @@ func ReadObjects(r io.Reader) ([]*unstructured.Unstructured, error) {
 			continue
 		}
 
-		if IsKubernetesObject(obj) {
+		if IsKubernetesObject(obj) && !IsKustomization(obj) {
 			objects = append(objects, obj)
 		}
 	}
@@ -81,6 +81,26 @@ func IsKubernetesObject(object *unstructured.Unstructured) bool {
 		return false
 	}
 	return true
+}
+
+func IsKustomization(object *unstructured.Unstructured) bool {
+	if object.GetKind() == "Kustomization" && object.GroupVersionKind().GroupKind().Group == "kustomize.config.k8s.io" {
+		return true
+	}
+	return false
+}
+
+// ObjectToYAML encodes the given Kubernetes API object to YAML.
+func ObjectToYAML(object *unstructured.Unstructured) string {
+	var builder strings.Builder
+	data, err := yaml.Marshal(object)
+	if err != nil {
+		return ""
+	}
+	builder.Write(data)
+	builder.WriteString("---\n")
+
+	return builder.String()
 }
 
 // ObjectsToYAML encodes the given Kubernetes API objects to a YAML multi-doc.

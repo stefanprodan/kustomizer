@@ -90,7 +90,7 @@ func (m *ResourceManager) DeleteInventory(ctx context.Context, i *inventory.Inve
 	return nil
 }
 
-// GetInventoryStaleObjects returns the list of objects subject to pruning.
+// GetInventoryStaleObjects returns the list of objects metadata subject to pruning.
 func (m *ResourceManager) GetInventoryStaleObjects(ctx context.Context, i *inventory.Inventory) ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 	existingInventory := inventory.NewInventory(i.Name, i.Namespace)

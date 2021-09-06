@@ -15,7 +15,7 @@ build:
 	CGO_ENABLED=0 go build -o ./bin/kustomizer ./cmd/kustomizer
 
 install:
-	go install cmd/kustomizer
+	go install ./cmd/kustomizer
 
 install-dev:
 	CGO_ENABLED=0 go build -o /usr/local/bin ./cmd/kustomizer

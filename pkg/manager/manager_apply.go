@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stefanprodan/kustomizer/pkg/objectutil"
@@ -71,7 +70,7 @@ func (m *ResourceManager) Apply(ctx context.Context, object *unstructured.Unstru
 // ApplyAll performs a server-side dry-run of the given objects, and based on the diff result,
 // it applies the objects that are new or modified.
 func (m *ResourceManager) ApplyAll(ctx context.Context, objects []*unstructured.Unstructured, force bool) (*ChangeSet, error) {
-	sort.Sort(ordering.SortableUnstructureds(objects))
+	sort.Sort(objectutil.SortableUnstructureds(objects))
 	changeSet := NewChangeSet()
 	var toApply []*unstructured.Unstructured
 	for _, object := range objects {
@@ -123,11 +122,11 @@ func (m *ResourceManager) ApplyAllStaged(ctx context.Context, objects []*unstruc
 	// contains only CRDs and Namespaces
 	var stageOne []*unstructured.Unstructured
 
-	// contains all objects except for  CRDs and Namespaces
+	// contains all objects except for CRDs and Namespaces
 	var stageTwo []*unstructured.Unstructured
 
 	for _, u := range objects {
-		if m.isClusterDefinition(u.GetKind()) {
+		if m.IsClusterDefinition(u.GetKind()) {
 			stageOne = append(stageOne, u)
 		} else {
 			stageTwo = append(stageTwo, u)
@@ -172,7 +171,7 @@ func (m *ResourceManager) apply(ctx context.Context, object *unstructured.Unstru
 	return m.client.Patch(ctx, object, client.Apply, opts...)
 }
 
-func (m *ResourceManager) isClusterDefinition(kind string) bool {
+func (m *ResourceManager) IsClusterDefinition(kind string) bool {
 	switch strings.ToLower(kind) {
 	case "customresourcedefinition":
 	case "namespace":

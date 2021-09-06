@@ -19,11 +19,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/manager"
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var applyCmd = &cobra.Command{
@@ -40,7 +44,6 @@ type applyFlags struct {
 	wait               bool
 	force              bool
 	prune              bool
-	mode               string
 }
 
 var applyArgs applyFlags
@@ -56,8 +59,7 @@ func init() {
 	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
 	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default",
 		"The namespace of the inventory configmap. The namespace must exist on the target cluster.")
-	applyCmd.Flags().StringVar(&applyArgs.mode, "mode", "Apply",
-		"The ResourceManager apply method, can be `Apply`, `ApplyAll`, `ApplyAllStaged`.")
+
 	rootCmd.AddCommand(applyCmd)
 }
 
@@ -84,6 +86,10 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	}
 	logger.Println(fmt.Sprintf("applying %v manifest(s)...", len(objects)))
 
+	for _, object := range objects {
+		fixReplicasConflict(object, objects)
+	}
+
 	kubeClient, err := newKubeClient(rootArgs.kubeconfig, rootArgs.kubecontext)
 	if err != nil {
 		return fmt.Errorf("client init failed: %w", err)
@@ -101,33 +107,41 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	switch applyArgs.mode {
-	case "Apply":
-		for _, object := range objects {
-			change, err := resMgr.Apply(ctx, object, applyArgs.force)
-			if err != nil {
-				return err
-			}
-			logger.Println(change.String())
+	// contains only CRDs and Namespaces
+	var stageOne []*unstructured.Unstructured
+
+	// contains all objects except for CRDs and Namespaces
+	var stageTwo []*unstructured.Unstructured
+
+	for _, u := range objects {
+		if resMgr.IsClusterDefinition(u.GetKind()) {
+			stageOne = append(stageOne, u)
+		} else {
+			stageTwo = append(stageTwo, u)
 		}
-	case "ApplyAll":
-		changeSet, err := resMgr.ApplyAll(ctx, objects, applyArgs.force)
+	}
+
+	if len(stageOne) > 0 {
+		changeSet, err := resMgr.ApplyAll(ctx, stageOne, applyArgs.force)
 		if err != nil {
 			return err
 		}
 		for _, change := range changeSet.Entries {
 			logger.Println(change.String())
 		}
-	case "ApplyAllStaged":
-		changeSet, err := resMgr.ApplyAllStaged(ctx, objects, applyArgs.force, 30*time.Second)
+
+		if err := resMgr.Wait(stageOne, 2*time.Second, 30*time.Second); err != nil {
+			return err
+		}
+	}
+
+	sort.Sort(objectutil.SortableUnstructureds(stageTwo))
+	for _, object := range stageTwo {
+		change, err := resMgr.Apply(ctx, object, applyArgs.force)
 		if err != nil {
 			return err
 		}
-		for _, change := range changeSet.Entries {
-			logger.Println(change.String())
-		}
-	default:
-		return fmt.Errorf("mode not supported")
+		logger.Println(change.String())
 	}
 
 	staleObjects, err := resMgr.GetInventoryStaleObjects(ctx, newInventory)
@@ -169,4 +183,19 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// fixReplicasConflict removes the replicas field from the given workload if it's managed by an HPA
+func fixReplicasConflict(object *unstructured.Unstructured, objects []*unstructured.Unstructured) {
+	for _, hpa := range objects {
+		if hpa.GetKind() == "HorizontalPodAutoscaler" && object.GetNamespace() == hpa.GetNamespace() {
+			targetKind, found, err := unstructured.NestedFieldCopy(hpa.Object, "spec", "scaleTargetRef", "kind")
+			if err == nil && found && fmt.Sprintf("%v", targetKind) == object.GetKind() {
+				targetName, found, err := unstructured.NestedFieldCopy(hpa.Object, "spec", "scaleTargetRef", "name")
+				if err == nil && found && fmt.Sprintf("%v", targetName) == object.GetName() {
+					unstructured.RemoveNestedField(object.Object, "spec", "replicas")
+				}
+			}
+		}
+	}
 }

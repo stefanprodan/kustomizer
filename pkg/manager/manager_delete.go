@@ -23,9 +23,9 @@ import (
 	"sort"
 
 	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,7 +48,7 @@ func (m *ResourceManager) Delete(ctx context.Context, object *unstructured.Unstr
 
 // DeleteAll deletes the given set of objects (not found errors are ignored).
 func (m *ResourceManager) DeleteAll(ctx context.Context, objects []*unstructured.Unstructured) (*ChangeSet, error) {
-	sort.Sort(sort.Reverse(ordering.SortableUnstructureds(objects)))
+	sort.Sort(sort.Reverse(objectutil.SortableUnstructureds(objects)))
 	changeSet := NewChangeSet()
 
 	for _, object := range objects {

@@ -26,14 +26,13 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
-
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var buildCmd = &cobra.Command{
@@ -122,11 +121,16 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", manifest, err)
 			}
-			objects = append(objects, objs...)
+
+			for _, obj := range objs {
+				if objectutil.IsKubernetesObject(obj) && !objectutil.IsKustomization(obj) {
+					objects = append(objects, obj)
+				}
+			}
 		}
 	}
 
-	sort.Sort(ordering.SortableUnstructureds(objects))
+	sort.Sort(objectutil.SortableUnstructureds(objects))
 	return objects, nil
 }
 

@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
+	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,7 +39,7 @@ func TestApply(t *testing.T) {
 		}
 
 		// expected created order
-		sort.Sort(ordering.SortableUnstructureds(objects))
+		sort.Sort(objectutil.SortableUnstructureds(objects))
 		var expected []string
 		for _, object := range objects {
 			expected = append(expected, objectutil.FmtUnstructured(object))
@@ -119,35 +119,6 @@ func TestApply(t *testing.T) {
 		// verify the configmap was updated in cluster with the right data value
 		if diff := cmp.Diff(val, "val"); diff != "" {
 			t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
-		}
-	})
-
-	t.Run("recreates deleted objects", func(t *testing.T) {
-		// delete the configmap
-		deletedChangeSet, err := manager.DeleteAll(ctx, []*unstructured.Unstructured{configMap})
-		for _, entry := range deletedChangeSet.Entries {
-			if diff := cmp.Diff(string(DeletedAction), entry.Action); diff != "" {
-				t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
-			}
-		}
-
-		// reapply objects
-		changeSet, err := manager.ApplyAllStaged(ctx, objects, false, timeout)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// verify the configmap was recreated
-		for _, entry := range changeSet.Entries {
-			if entry.Subject == configMapName {
-				if diff := cmp.Diff(string(CreatedAction), entry.Action); diff != "" {
-					t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
-				}
-			} else {
-				if diff := cmp.Diff(string(UnchangedAction), entry.Action); diff != "" {
-					t.Errorf("Mismatch from expected value (-want +got):\n%s", diff)
-				}
-			}
 		}
 	})
 
