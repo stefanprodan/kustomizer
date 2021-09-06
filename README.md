@@ -10,15 +10,14 @@ objects that were previously applied but are missing from the current inventory.
 
 ## Install
 
-Download the Kustomizer binary from the 
-[release page](https://github.com/stefanprodan/kustomizer/releases)
-or run [this script](install/README.md):
+The Kustomizer CLI is available as a binary executable for all major platforms,
+the binaries can be downloaded form GitHub [release page](https://github.com/stefanprodan/kustomizer/releases).
+
+Install the latest release on macOS or Linux with [this script](install/README.md):
 
 ```bash
-curl -s https://kustomizer.dev/install/kustomizer.sh | sudo bash
+curl -s https://kustomizer.dev/install.sh | bash
 ```
-
-Windows users can download the binary from the [release page](https://github.com/stefanprodan/kustomizer/releases).
 
 ## Available Commands
 

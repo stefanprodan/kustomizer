@@ -16,17 +16,3 @@ archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
-brews:
-  - tap:
-      owner: stefanprodan
-      name: kustomizer
-    folder: Formula
-    homepage: "https://kustomizer.dev/"
-    description: "Kustomize build, apply, prune command-line utility."
-
-    dependencies:
-      - name: kubectl
-        type: optional
-
-    test: |
-      system "#{bin}/kustomizer --version"

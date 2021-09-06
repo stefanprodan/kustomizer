@@ -1,12 +1,12 @@
 name: Setup Kustomizer CLI
-description: A GitHub Action for running kustomizer commands
+description: A GitHub Action for running Kustomizer commands
 author: Stefan Prodan
 branding:
   color: blue
   icon: command
 inputs:
   version:
-    description: "Kustomizer version e.g. 0.8.0 (defaults to latest stable release)"
+    description: "Kustomizer version e.g. 1.0.0 (defaults to latest stable release)"
     required: false
   arch:
     description: "arch can be amd64, arm64 or arm"
@@ -15,7 +15,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: "Download Kustomizer binary to tmp"
+    - name: "Download kustomizer binary to tmp"
       shell: bash
       run: |
         ARCH=${{ inputs.arch }}

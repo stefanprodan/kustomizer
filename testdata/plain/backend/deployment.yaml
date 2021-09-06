@@ -4,7 +4,6 @@ metadata:
   name: backend
   namespace: kustomizer-demo
 spec:
-  replicas: 1
   minReadySeconds: 3
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 60
