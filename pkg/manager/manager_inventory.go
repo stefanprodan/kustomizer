@@ -43,6 +43,13 @@ func (m *ResourceManager) ApplyInventory(ctx context.Context, i *inventory.Inven
 	cm.Annotations = map[string]string{
 		m.owner.Group + "/last-applied-time": time.Now().UTC().Format(time.RFC3339),
 	}
+	if i.Source != "" {
+		cm.Annotations[m.owner.Group+"/source"] = i.Source
+	}
+	if i.Revision != "" {
+		cm.Annotations[m.owner.Group+"/revision"] = i.Revision
+	}
+
 	cm.Data = map[string]string{
 		inventoryKindName: string(data),
 	}
@@ -75,6 +82,16 @@ func (m *ResourceManager) GetInventory(ctx context.Context, i *inventory.Invento
 	}
 
 	i.Entries = entries
+
+	for k, v := range cm.GetAnnotations() {
+		switch k {
+		case m.owner.Group + "/source":
+			i.Source = v
+		case m.owner.Group + "/revision":
+			i.Revision = v
+		}
+	}
+
 	return nil
 }
 

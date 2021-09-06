@@ -30,10 +30,16 @@ import (
 // Inventory is a record of objects that are applied on a cluster stored as a configmap.
 type Inventory struct {
 	// Name of the inventory configmap.
-	Name string
+	Name string `json:"name"`
 
 	// Namespace of the inventory configmap.
-	Namespace string
+	Namespace string `json:"namespace"`
+
+	// Source is the URL of the source code.
+	Source string `json:"source,omitempty"`
+
+	// Revision is the Source control revision identifier.
+	Revision string `json:"revision,omitempty"`
 
 	// Entries of Kubernetes objects metadata.
 	Entries []Entry `json:"entries"`
@@ -56,6 +62,12 @@ func NewInventory(name, namespace string) *Inventory {
 		Namespace: namespace,
 		Entries:   []Entry{},
 	}
+}
+
+// SetSource sets the source url and revision for this inventory.
+func (inv *Inventory) SetSource(url, revision string) {
+	inv.Source = url
+	inv.Revision = revision
 }
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.

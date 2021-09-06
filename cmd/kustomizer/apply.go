@@ -44,6 +44,8 @@ type applyFlags struct {
 	wait               bool
 	force              bool
 	prune              bool
+	source             string
+	revision           string
 }
 
 var applyArgs applyFlags
@@ -59,6 +61,8 @@ func init() {
 	applyCmd.Flags().StringVarP(&applyArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
 	applyCmd.Flags().StringVar(&applyArgs.inventoryNamespace, "inventory-namespace", "default",
 		"The namespace of the inventory configmap. The namespace must exist on the target cluster.")
+	applyCmd.Flags().StringVar(&applyArgs.source, "source", "", "The URL to the source code.")
+	applyCmd.Flags().StringVar(&applyArgs.revision, "revision", "", "The revision identifier.")
 
 	rootCmd.AddCommand(applyCmd)
 }
@@ -81,6 +85,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)
+	newInventory.SetSource(applyArgs.source, applyArgs.revision)
 	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}

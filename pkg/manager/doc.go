@@ -17,14 +17,13 @@ limitations under the License.
 
 // Package manager contains utilities for managing Kubernetes resources.
 //
-// The ResourceManager performs the following actions:
-// - orders the Kubernetes objects for apply (CRDs, Namespaces, ClusterRoles first)
+// The ResourceManager can be used to write a GitOps reconciler that:
+// - maintains an inventory of objects applied on the cluster
+// - orders the Kubernetes objects for apply (CRDs, Namespaces first, Webhooks last)
 // - validates the objects with server-side dry-run apply
 // - determines if the in-cluster objects are in drift based on the dry-run result
-// - reconciles the objects on the cluster with server-side apply
+// - applies the objects on the cluster with server-side apply
 // - waits for the objects to be fully reconciled by looking up their readiness status
 // - deletes objects that are subject to garbage collection
 // - waits for the deleted objects to be terminated
-// - maintains an inventory of objects applied on the cluster
-// - performs garbage collection of stale objects based on the inventory entries
 package manager
