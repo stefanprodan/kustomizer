@@ -223,8 +223,7 @@ jobs:
       - name: Deploy
         run: |
           kustomizer apply -f ./deploy --wait --prune \
-            --inventory-name=my-app \
-            --inventory-namespace=default \
+            --inventory-name=${{ github.event.repository.name }} \
             --source=${{ github.event.repository.html_url }} \
             --revision=${{ github.sha }}
 ```

@@ -6,7 +6,7 @@ branding:
   icon: command
 inputs:
   version:
-    description: "Kustomizer version e.g. 1.0.0 (defaults to latest stable release)"
+    description: "kustomizer version e.g. 1.0.0 (defaults to latest stable release)"
     required: false
   arch:
     description: "arch can be amd64 or arm64"
@@ -25,7 +25,7 @@ runs:
           VERSION=$(curl https://api.github.com/repos/stefanprodan/kustomizer/releases/latest -sL | grep tag_name | sed -E 's/.*"([^"]+)".*/\1/' | cut -c 2-)
         fi
 
-        BIN_URL="https://github.com/stefanprodan/kustomizer/releases/download/v${VERSION}/flux_${VERSION}_linux_${ARCH}.tar.gz"
+        BIN_URL="https://github.com/stefanprodan/kustomizer/releases/download/v${VERSION}/kustomizer_${VERSION}_linux_${ARCH}.tar.gz"
         curl -sL ${BIN_URL} -o /tmp/kustomizer.tar.gz
         mkdir -p /tmp/kustomizer
         tar -C /tmp/kustomizer/ -zxvf /tmp/kustomizer.tar.gz
