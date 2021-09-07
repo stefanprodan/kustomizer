@@ -17,21 +17,24 @@ limitations under the License.
 package main
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories.",
-}
+var completionFishCmd = &cobra.Command{
+	Use:   "fish",
+	Short: "Generates fish completion scripts",
+	Example: `To configure your fish shell to load completions for each session write this script to your completions dir:
 
-type getFlags struct {
-	namespace string
-}
+kustomizer completion fish > ~/.config/fish/completions/kustomizer.fish
 
-var getArgs getFlags
+See http://fishshell.com/docs/current/index.html#completion-own for more details`,
+	Run: func(cmd *cobra.Command, args []string) {
+		rootCmd.GenFishCompletion(os.Stdout, true)
+	},
+}
 
 func init() {
-	getCmd.Flags().StringVarP(&getArgs.namespace, "namespace", "n", "default", "The namespace of the inventory.")
-	rootCmd.AddCommand(getCmd)
+	completionCmd.AddCommand(completionFishCmd)
 }

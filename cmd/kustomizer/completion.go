@@ -20,18 +20,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories.",
+var completionCmd = &cobra.Command{
+	Use:   "completion",
+	Short: "Generates completion scripts for various shells",
+	Long:  "The completion sub-command generates completion scripts for various shells",
 }
-
-type getFlags struct {
-	namespace string
-}
-
-var getArgs getFlags
 
 func init() {
-	getCmd.Flags().StringVarP(&getArgs.namespace, "namespace", "n", "default", "The namespace of the inventory.")
-	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(completionCmd)
 }

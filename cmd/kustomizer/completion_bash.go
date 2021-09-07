@@ -17,21 +17,27 @@ limitations under the License.
 package main
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories.",
-}
+var completionBashCmd = &cobra.Command{
+	Use:   "bash",
+	Short: "Generates bash completion scripts",
+	Example: `To load completion run
 
-type getFlags struct {
-	namespace string
-}
+. <(kustomizer completion bash)
 
-var getArgs getFlags
+To configure your bash shell to load completions for each session add to your bashrc
+
+# ~/.bashrc or ~/.profile
+command -v kustomizer >/dev/null && . <(kustomizer completion bash)`,
+	Run: func(cmd *cobra.Command, args []string) {
+		rootCmd.GenBashCompletion(os.Stdout)
+	},
+}
 
 func init() {
-	getCmd.Flags().StringVarP(&getArgs.namespace, "namespace", "n", "default", "The namespace of the inventory.")
-	rootCmd.AddCommand(getCmd)
+	completionCmd.AddCommand(completionBashCmd)
 }

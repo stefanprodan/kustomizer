@@ -9,7 +9,7 @@ inputs:
     description: "Kustomizer version e.g. 1.0.0 (defaults to latest stable release)"
     required: false
   arch:
-    description: "arch can be amd64, arm64 or arm"
+    description: "arch can be amd64 or arm64"
     required: true
     default: "amd64"
 runs:
