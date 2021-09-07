@@ -1,17 +1,31 @@
+project_name: kustomizer
 builds:
-  - main: ./cmd/kustomizer
-    ldflags:
-      - -s -w -X main.VERSION={{ .Version }}
-    binary: kustomizer
+  - <<: &build_defaults
+      binary: kustomizer
+      main: ./cmd/kustomizer
+      ldflags:
+        - -s -w -X main.VERSION={{ .Version }}
+      env:
+        - CGO_ENABLED=0
+    id: linux
     goos:
-      - darwin
       - linux
-      - windows
     goarch:
       - amd64
       - arm64
-    env:
-      - CGO_ENABLED=0
+  - <<: *build_defaults
+    id: darwin
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+  - <<: *build_defaults
+    id: windows
+    goos:
+      - windows
+    goarch:
+      - amd64
 archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     id: nix
