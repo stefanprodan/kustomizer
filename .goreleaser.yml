@@ -14,5 +14,14 @@ builds:
       - CGO_ENABLED=0
 archives:
   - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: nix
+    builds: [darwin, linux]
+    format: tar.gz
+    files:
+      - LICENSE
+  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: windows
+    builds: [windows]
+    format: zip
     files:
       - LICENSE
