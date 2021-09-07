@@ -14,7 +14,7 @@ Compared to `kubectl apply`, Kustomizer does things a little different:
 - Validates all resources with dry-run apply, and applies only the ones with changes.
 - Applies first custom resource definitions (CRDs) and namespaces, waits for them to register and only then applies the custom resources.
 - Waits for the applied resources to be fully reconciled (checks the ready status of replicasets, services, ingresses, and other custom resources).
-- Deletes stale objects like ConfigMap and Secrets generated with Kustomize or other tools.
+- Deletes stale objects like ConfigMaps and Secrets generated with Kustomize or other tools.
 
 Kustomizer relies on [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
 and requires a Kubernetes cluster **v1.18** or newer.
@@ -89,7 +89,7 @@ To apply Kustomize overlays, you can use `kustomizer apply -k path/to/overlay`,
 for more details see `kustomizer apply --help`.
 
 After applying the resources, Kustomizer creates an inventory.
-You cal list all inventories in a specific namespace with:
+You can list all inventories in a specific namespace with:
 
 ```console
 $ kustomizer get inventories -n default
