@@ -2,9 +2,9 @@ name: e2e
 
 on:
   pull_request:
+    branches: [main]
   push:
-    branches:
-      - master
+    branches: [main]
 
 jobs:
   kind:
@@ -22,13 +22,14 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14.x
+          go-version: 1.16.x
       - name: Setup Kubernetes
         uses: engineerd/setup-kind@v0.5.0
-      - name: Setup Kustomize
-        uses: ./.github/actions/kustomize
+        with:
+          version: v0.11.1
+          image: kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6
       - name: Run test
-        run: make test
+        run: make test-race
       - name: Check if working tree is dirty
         run: |
           if [[ $(git diff --stat) != '' ]]; then
@@ -36,18 +37,45 @@ jobs:
             exit 1
           fi
       - name: Build
-        run: sudo go build -o ./bin/kustomizer ./cmd/kustomizer
-      - name: Smoke tests
+        run: make build
+      - name: Test apply --kustomize
         run: |
-          ./bin/kustomizer apply testdata/plain/ --name=test --revision=1.0.0
-           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep frontend
+          ./bin/kustomizer apply -i kustomizer-test -k testdata/kustomize/ --wait --prune
+          kubectl -n kustomizer-test get tests 2>&1 | grep custom-resource-test1
+      - name: Test diff --kustomize
+        run: |
+          echo "diff=test" >> testdata/kustomize/test.conf
+          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ --prune 2>&1 | grep drifted
+      - name: Test diff secret marks
+        run: |
+          echo "diff=test" >> testdata/kustomize/secret.conf
+          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '******'"
+      - name: Test apply --filename
+        run: |
+          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
+          kubectl -n kustomizer-test get svc frontend 2>&1 | grep frontend
+      - name: Test apply --prune
+        run: |
           rm -rf testdata/plain/frontend
-          ./bin/kustomizer apply testdata/plain/ --name=test --revision=1.1.0
+          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
-          ./bin/kustomizer delete --name=test
+      - name: Test delete --wait
+        run: |
+          ./bin/kustomizer delete -i kustomizer-demo --wait
+          kubectl get ns kustomizer-demo 2>&1 | grep NotFound
+          ./bin/kustomizer delete -i kustomizer-test --wait
+          kubectl get crd tests.testing.kustomizer.dev 2>&1 | grep NotFound
+      - name: Load test apply (110 objects)
+        run: |
+          ./bin/kustomizer apply -i load-test -k ./testdata/loadtest/
+      - name: Load test delete (110 objects)
+        run: |
+          ./bin/kustomizer delete -i load-test
+      - name: Test staged apply
+        run: |
+          ./bin/kustomizer apply -i cert-test -k ./testdata/certs/ --prune --wait
+          kubectl -n kustomizer-cert-test wait issuers/my-ca-issuer --for=condition=ready --timeout=1m
       - name: Debug failure
         if: failure()
         run: |
-          kubectl version --client --short
           kubectl -n default get configmaps -oyaml
-          kubectl -n kustomizer-demo get all

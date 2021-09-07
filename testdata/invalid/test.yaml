@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: invalid1
+stringData:
+  token: 0
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: invalid2
+  namespace: default
+stringData:
+  token: 0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invalid3
+  namespace: default
+data:
+  token: 0

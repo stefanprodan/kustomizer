@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: demo-read-only
+  name: kustomizer-demo-read-only
 rules:
 - apiGroups:
   - apps
@@ -14,11 +14,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: demo-read-only
+  name: kustomizer-demo-read-only
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: demo-read-only
+  name: kustomizer-demo-read-only
 subjects:
   - kind: ServiceAccount
     name: demo

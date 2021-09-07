@@ -1,0 +1,81 @@
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test1
+spec:
+  type: integration
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test2
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test3
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test4
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test5
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test6
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test7
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test8
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test9
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+apiVersion: testing.kustomizer.dev/v1
+kind: Test
+metadata:
+  name: custom-resource-test10
+spec:
+  type: unit
+  valuesFrom: test-config
+---
+
