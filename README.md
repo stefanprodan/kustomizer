@@ -11,10 +11,12 @@ objects that were previously applied but are missing from the current revision.
 Compared to `kubectl apply`, Kustomizer does things a little different:
 
 - Applies first custom resource definitions (CRDs) and namespaces, waits for them to register and only then applies the custom resources.
-- Skips to apply resources that haven't changed
-  (determined with Kubernetes API [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) dry-run).
+- Skips to apply resources that haven't changed.
 - Waits for the applied resources to be fully reconciled (waits for replicasets rollout, ingress and other custom resources to become ready).
 - Deletes stale objects like ConfigMap and Secrets generated with Kustomize or other tools.
+
+Kustomizer relies on Kubernetes API [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
+and [kstatus](https://pkg.go.dev/sigs.k8s.io/cli-utils/pkg/kstatus).
 
 ## Install
 
@@ -33,11 +35,11 @@ Kustomizer needs a Kubernetes cluster version **1.18** or later and a valid `kub
 
 The Kustomize CLI comes with the following commands:
 
-* `apply`  Apply validates the given Kubernetes manifests or Kustomize overlays and reconciles them using server-side apply.
 * `build`  Build scans the given path for Kubernetes manifests or Kustomize overlays and prints the YAML multi-doc to stdout.
-* `delete` Delete removes the Kubernetes objects in the inventory from the cluster and waits for termination.
-* `diff`   Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff to stdout.
+* `apply`  Apply validates the given Kubernetes manifests or Kustomize overlays and reconciles them using server-side apply.
 * `get`    Prints the content of inventories and their source revision.
+* `diff`   Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff to stdout.
+* `delete` Delete removes the Kubernetes objects in the inventory from the cluster and waits for termination.
 
 ## Get Started
 
@@ -80,13 +82,22 @@ waits for the workloads to be rollout.
 To apply Kustomize overlays, you can use `kustomizer apply -k path/to/overlay`, for more details see `--help`.
 
 After applying the resources, Kustomizer creates an inventory.
-You can list the content of an inventory with:
+You cal list all inventories in a specific namespace with:
+
+```console
+$ kustomizer get inventories --namespace default
+
+NAME	ENTRIES	SOURCE                                        	REVISION	LAST APPLIED         
+demo	10     	https://github.com/stefanprodan/kustomizer.git	e44c210 	2021-09-06T16:33:08Z
+```
+
+You can list the Kubernetes objects in an inventory with:
 
 ```console
 $ kustomizer get inventory demo
 
 Inventory: default/demo
-LastAppliedTime: 2021-09-06T16:33:08Z
+LastApplied: 2021-09-06T16:33:08Z
 Source: https://github.com/stefanprodan/kustomizer.git
 Revision: e44c210
 Entries:
@@ -102,14 +113,40 @@ Entries:
 - HorizontalPodAutoscaler/kustomizer-demo/frontend
 ```
 
-The inventory entries are used to track which objects are subject to garbage collection.
+The inventory records are used to track which objects are subject to garbage collection.
 The inventory is persistent on the cluster as a ConfigMap.
 
-Remove the `frontend` and the `rbac` manifests from the local dir:
+Change the min replicas of the `backend` HPA and remove the `frontend` and the `rbac` manifests from the local dir:
 
 ```bash
 rm -rf testdata/plain/frontend
 rm -rf testdata/plain/common/rbac.yaml
+```
+
+Preview the changes using diff:
+
+```console
+$ kustomizer diff -i demo -f ./testdata/plain/ --prune
+
+► HorizontalPodAutoscaler/kustomizer-demo/backend drifted
+  (
+  	"""
+  	... // 18 identical lines
+  	        type: Utilization
+  	    type: Resource
+- 	  minReplicas: 2
++ 	  minReplicas: 1
+  	  scaleTargetRef:
+  	    apiVersion: apps/v1
+  	... // 32 identical lines
+  	"""
+  )
+
+► ClusterRole/kustomizer-demo-read-only deleted
+► ClusterRoleBinding/kustomizer-demo-read-only deleted
+► Service/kustomizer-demo/frontend deleted
+► Deployment/kustomizer-demo/frontend deleted
+► HorizontalPodAutoscaler/kustomizer-demo/frontend deleted
 ```
 
 Rerun the apply command:
@@ -123,7 +160,7 @@ Namespace/kustomizer-demo unchanged
 ServiceAccount/kustomizer-demo/demo unchanged
 Service/kustomizer-demo/backend unchanged
 Deployment/kustomizer-demo/backend unchanged
-HorizontalPodAutoscaler/kustomizer-demo/backend unchanged
+HorizontalPodAutoscaler/kustomizer-demo/backend configured
 HorizontalPodAutoscaler/kustomizer-demo/frontend deleted
 Deployment/kustomizer-demo/frontend deleted
 Service/kustomizer-demo/frontend deleted

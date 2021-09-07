@@ -19,11 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -68,31 +71,47 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var rows [][]string
 	for _, cm := range list.Items {
-		fmt.Println(fmt.Sprintf("Inventory: %s/%s", cm.GetNamespace(), cm.GetName()))
+		var ts string
+		var source string
+		var rev string
 		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/last-applied-time"]; ok {
-			fmt.Println(fmt.Sprintf("LastAppliedTime: %s", s))
+			ts = s
 		}
 		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/source"]; ok {
-			fmt.Println(fmt.Sprintf("Source: %s", s))
+			source = s
 		}
 		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/revision"]; ok {
-			fmt.Println(fmt.Sprintf("Revision: %s", s))
+			rev = s
 		}
 		i := inventory.NewInventory(cm.GetName(), cm.GetNamespace())
 		if err := resMgr.GetInventory(ctx, i); err != nil {
 			return err
 		}
-
-		fmt.Println("Entries:")
-		entries, err := i.ListMeta()
-		if err != nil {
-			return err
-		}
-		for _, entry := range entries {
-			fmt.Println("-", objectutil.FmtObjMetadata(entry))
-		}
+		row := []string{cm.GetName(), fmt.Sprintf("%v", len(i.Entries)), source, rev, ts}
+		rows = append(rows, row)
 	}
 
+	printTable(os.Stdout, []string{"name", "entries", "source", "revision", "last applied"}, rows)
+
 	return nil
+}
+
+func printTable(writer io.Writer, header []string, rows [][]string) {
+	table := tablewriter.NewWriter(writer)
+	table.SetHeader(header)
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t")
+	table.SetNoWhiteSpace(true)
+	table.AppendBulk(rows)
+	table.Render()
 }
