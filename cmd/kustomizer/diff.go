@@ -37,6 +37,7 @@ var diffCmd = &cobra.Command{
 type diffFlags struct {
 	filename           []string
 	kustomize          string
+	patch              []string
 	inventoryName      string
 	inventoryNamespace string
 	prune              bool
@@ -49,6 +50,8 @@ func init() {
 		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
 	diffCmd.Flags().StringVarP(&diffArgs.kustomize, "kustomize", "k", "",
 		"Path to a directory that contains a kustomization.yaml.")
+	diffCmd.Flags().StringSliceVarP(&diffArgs.patch, "patch", "p", nil,
+		"Path to a kustomization file that contains a list of patches.")
 	diffCmd.Flags().BoolVar(&diffArgs.prune, "prune", false, "Delete stale objects from the cluster.")
 	diffCmd.Flags().StringVarP(&diffArgs.inventoryName, "inventory-name", "i", "", "The name of the inventory configmap.")
 	diffCmd.Flags().StringVar(&diffArgs.inventoryNamespace, "inventory-namespace", "default",
@@ -61,7 +64,7 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("-f or -k is required")
 	}
 
-	objects, err := buildManifests(diffArgs.kustomize, diffArgs.filename)
+	objects, err := buildManifests(diffArgs.kustomize, diffArgs.filename, diffArgs.patch)
 	if err != nil {
 		return err
 	}

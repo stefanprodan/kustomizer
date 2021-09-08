@@ -32,13 +32,14 @@ import (
 
 var applyCmd = &cobra.Command{
 	Use:   "apply",
-	Short: "Apply Kubernetes manifests and Kustomize overlays using server-side apply.",
+	Short: "Apply validates the given Kubernetes manifests and Kustomize overlays and reconciles them using server-side apply.",
 	RunE:  runApplyCmd,
 }
 
 type applyFlags struct {
 	filename           []string
 	kustomize          string
+	patch              []string
 	inventoryName      string
 	inventoryNamespace string
 	wait               bool
@@ -55,6 +56,8 @@ func init() {
 		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
 	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "",
 		"Path to a directory that contains a kustomization.yaml.")
+	applyCmd.Flags().StringSliceVarP(&applyArgs.patch, "patch", "p", nil,
+		"Path to a kustomization file that contains a list of patches.")
 	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "Wait for the applied Kubernetes objects to become ready.")
 	applyCmd.Flags().BoolVar(&applyArgs.force, "force", false, "Recreate objects that contain immutable fields changes.")
 	applyCmd.Flags().BoolVar(&applyArgs.prune, "prune", false, "Delete stale objects from the cluster.")
@@ -79,7 +82,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	logger.Println("building inventory...")
-	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename)
+	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename, applyArgs.patch)
 	if err != nil {
 		return err
 	}

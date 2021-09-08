@@ -22,7 +22,7 @@ import (
 
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "Get prints the content of inventories.",
+	Short: "Get prints the content of inventories and their source revision.",
 }
 
 type getFlags struct {
