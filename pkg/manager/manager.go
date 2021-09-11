@@ -52,10 +52,15 @@ func (m *ResourceManager) Client() client.Client {
 // 	<owner.group>/namespace: <namespace>
 func (m *ResourceManager) SetOwnerLabels(objects []*unstructured.Unstructured, name, namespace string) {
 	for _, object := range objects {
-		object.SetLabels(map[string]string{
-			m.owner.Group + "/name":      name,
-			m.owner.Group + "/namespace": namespace,
-		})
+		labels := object.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+
+		labels[m.owner.Group+"/name"] = name
+		labels[m.owner.Group+"/namespace"] = namespace
+
+		object.SetLabels(labels)
 	}
 }
 
