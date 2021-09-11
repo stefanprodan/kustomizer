@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/securityContext
+        value:
+          runAsUser: 10000
+          fsGroup: 1337
+      - op: add
+        path: /spec/template/spec/containers/0/securityContext
+        value:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL

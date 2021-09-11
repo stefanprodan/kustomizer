@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -33,17 +34,19 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/yaml"
 )
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build a set of Kubernetes manifests or Kustomize overlays.",
+	Short: "Build scans the given path for Kubernetes manifests or Kustomize overlays and prints the multi-doc to stdout.",
 	RunE:  runBuildCmd,
 }
 
 type buildFlags struct {
 	filename  []string
 	kustomize string
+	patch     []string
 	output    string
 }
 
@@ -54,6 +57,8 @@ func init() {
 		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
 	buildCmd.Flags().StringVarP(&buildArgs.kustomize, "kustomize", "k", "",
 		"Path to a directory that contains a kustomization.yaml.")
+	buildCmd.Flags().StringSliceVarP(&buildArgs.patch, "patch", "p", nil,
+		"Path to a kustomization file that contains a list of patches.")
 	buildCmd.Flags().StringVarP(&buildArgs.output, "output", "o", "yaml",
 		"Write manifests to stdout in YAML or JSON format.")
 
@@ -65,7 +70,7 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("-f or -k is required")
 	}
 
-	objects, err := buildManifests(buildArgs.kustomize, buildArgs.filename)
+	objects, err := buildManifests(buildArgs.kustomize, buildArgs.filename, buildArgs.patch)
 	if err != nil {
 		return err
 	}
@@ -90,7 +95,7 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.Unstructured, error) {
+func buildManifests(kustomizePath string, filePaths []string, patchPaths []string) ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 	if kustomizePath != "" {
 		data, err := buildKustomization(kustomizePath)
@@ -127,6 +132,21 @@ func buildManifests(kustomizePath string, filePaths []string) ([]*unstructured.U
 					objects = append(objects, obj)
 				}
 			}
+		}
+	}
+
+	if len(patchPaths) > 0 {
+		for _, patchPath := range patchPaths {
+			data, err := applyPatches(patchPath, objects)
+			if err != nil {
+				return nil, err
+			}
+
+			objs, err := objectutil.ReadObjects(bytes.NewReader(data))
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", kustomizePath, err)
+			}
+			objects = objs
 		}
 	}
 
@@ -217,6 +237,71 @@ func buildKustomization(base string) ([]byte, error) {
 
 	k := krusty.MakeKustomizer(buildOptions)
 	m, err := k.Run(fs, base)
+	if err != nil {
+		return nil, err
+	}
+
+	resources, err := m.AsYaml()
+	if err != nil {
+		return nil, err
+	}
+
+	return resources, nil
+}
+
+func applyPatches(kFilePath string, objects []*unstructured.Unstructured) ([]byte, error) {
+	kustomizeBuildMutex.Lock()
+	defer kustomizeBuildMutex.Unlock()
+
+	data, err := ioutil.ReadFile(kFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	template := kustypes.Kustomization{
+		TypeMeta: kustypes.TypeMeta{
+			APIVersion: kustypes.KustomizationVersion,
+			Kind:       kustypes.KustomizationKind,
+		},
+	}
+
+	if err := yaml.Unmarshal(data, &template); err != nil {
+		return nil, err
+	}
+
+	if len(template.Patches) == 0 {
+		return nil, fmt.Errorf("no patches found in %s", kFilePath)
+	}
+
+	fs := filesys.MakeFsInMemory()
+	kustomization := kustypes.Kustomization{}
+	kustomization.APIVersion = kustypes.KustomizationVersion
+	kustomization.Kind = kustypes.KustomizationKind
+
+	const input = "resources.yaml"
+	kustomization.Resources = append(kustomization.Resources, input)
+	yml, err := objectutil.ObjectsToYAML(objects)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := fs.WriteFile(input, []byte(yml)); err != nil {
+		return nil, err
+	}
+
+	kustomization.Patches = template.Patches
+
+	d, err := yaml.Marshal(kustomization)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := fs.WriteFile("kustomization.yaml", d); err != nil {
+		return nil, err
+	}
+
+	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+	m, err := k.Run(fs, ".")
 	if err != nil {
 		return nil, err
 	}

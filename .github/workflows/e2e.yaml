@@ -59,6 +59,10 @@ jobs:
           rm -rf testdata/plain/frontend
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
+      - name: Test apply --patch
+        run: |
+          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ -p testdata/patches/safe-to-evict.yaml --wait --prune
+          kubectl -n kustomizer-demo get deployment backend -oyaml | grep safe-to-evict
       - name: Test delete --wait
         run: |
           ./bin/kustomizer delete -i kustomizer-demo --wait
