@@ -174,6 +174,7 @@ func (m *ResourceManager) apply(ctx context.Context, object *unstructured.Unstru
 func (m *ResourceManager) IsClusterDefinition(kind string) bool {
 	switch strings.ToLower(kind) {
 	case "customresourcedefinition":
+		return true
 	case "namespace":
 		return true
 	}
