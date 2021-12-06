@@ -32,6 +32,6 @@ type getFlags struct {
 var getArgs getFlags
 
 func init() {
-	getCmd.Flags().StringVarP(&getArgs.namespace, "namespace", "n", "default", "The namespace of the inventory.")
+	getCmd.PersistentFlags().StringVarP(&getArgs.namespace, "namespace", "n", "default", "The namespace of the inventory.")
 	rootCmd.AddCommand(getCmd)
 }
