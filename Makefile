@@ -3,7 +3,7 @@
 all: test build
 
 tidy:
-	go mod tidy
+	rm -f go.sum; go mod tidy
 
 fmt:
 	go fmt ./...
