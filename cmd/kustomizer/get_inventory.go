@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
+
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var getInventoryCmd = &cobra.Command{
@@ -57,12 +57,17 @@ func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+
+	invStorage := &inventory.InventoryStorage{
+		Manager: resMgr,
+		Owner:   inventoryOwner,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	if err := resMgr.GetInventory(ctx, i); err != nil {
+	if err := invStorage.GetInventory(ctx, i); err != nil {
 		return err
 	}
 
@@ -75,7 +80,7 @@ func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, entry := range entries {
-		fmt.Println("-", objectutil.FmtObjMetadata(entry))
+		fmt.Println("-", ssa.FmtObjMetadata(entry))
 	}
 
 	return nil

@@ -20,12 +20,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -108,9 +106,13 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
-
+	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 	resMgr.SetOwnerLabels(objects, applyArgs.inventoryName, applyArgs.inventoryNamespace)
+
+	invStorage := &inventory.InventoryStorage{
+		Manager: resMgr,
+		Owner:   inventoryOwner,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
@@ -122,15 +124,21 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	var stageTwo []*unstructured.Unstructured
 
 	for _, u := range objects {
-		if resMgr.IsClusterDefinition(u.GetKind()) {
+		if ssa.IsClusterDefinition(u) {
 			stageOne = append(stageOne, u)
 		} else {
 			stageTwo = append(stageTwo, u)
 		}
 	}
 
+	applyOpts := ssa.DefaultApplyOptions()
+	applyOpts.Force = applyArgs.force
+
+	waitOpts := ssa.DefaultWaitOptions()
+	waitOpts.Timeout = rootArgs.timeout
+
 	if len(stageOne) > 0 {
-		changeSet, err := resMgr.ApplyAll(ctx, stageOne, applyArgs.force)
+		changeSet, err := resMgr.ApplyAll(ctx, stageOne, applyOpts)
 		if err != nil {
 			return err
 		}
@@ -138,32 +146,32 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			logger.Println(change.String())
 		}
 
-		if err := resMgr.Wait(stageOne, 2*time.Second, 30*time.Second); err != nil {
+		if err := resMgr.Wait(stageOne, waitOpts); err != nil {
 			return err
 		}
 	}
 
-	sort.Sort(objectutil.SortableUnstructureds(stageTwo))
+	sort.Sort(ssa.SortableUnstructureds(stageTwo))
 	for _, object := range stageTwo {
-		change, err := resMgr.Apply(ctx, object, applyArgs.force)
+		change, err := resMgr.Apply(ctx, object, applyOpts)
 		if err != nil {
 			return err
 		}
 		logger.Println(change.String())
 	}
 
-	staleObjects, err := resMgr.GetInventoryStaleObjects(ctx, newInventory)
+	staleObjects, err := invStorage.GetInventoryStaleObjects(ctx, newInventory)
 	if err != nil {
 		return fmt.Errorf("inventory query failed, error: %w", err)
 	}
 
-	err = resMgr.ApplyInventory(ctx, newInventory)
+	err = invStorage.ApplyInventory(ctx, newInventory)
 	if err != nil {
 		return fmt.Errorf("inventory apply failed, error: %w", err)
 	}
 
 	if applyArgs.prune && len(staleObjects) > 0 {
-		changeSet, err := resMgr.DeleteAll(ctx, staleObjects)
+		changeSet, err := resMgr.DeleteAll(ctx, staleObjects, ssa.DefaultDeleteOptions())
 		if err != nil {
 			return fmt.Errorf("prune failed, error: %w", err)
 		}
@@ -175,13 +183,14 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 	if applyArgs.wait {
 		logger.Println("waiting for resources to become ready...")
 
-		err = resMgr.Wait(objects, 2*time.Second, rootArgs.timeout)
+		err = resMgr.Wait(objects, waitOpts)
 		if err != nil {
 			return err
 		}
 
 		if applyArgs.prune && len(staleObjects) > 0 {
-			err = resMgr.WaitForTermination(staleObjects, 2*time.Second, rootArgs.timeout)
+
+			err = resMgr.WaitForTermination(staleObjects, waitOpts)
 			if err != nil {
 				return fmt.Errorf("wating for termination failed, error: %w", err)
 			}

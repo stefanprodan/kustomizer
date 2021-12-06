@@ -19,14 +19,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/fluxcd/pkg/ssa"
 	"io"
 	"os"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/manager"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,7 +56,12 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+
+	invStorage := &inventory.InventoryStorage{
+		Manager: resMgr,
+		Owner:   inventoryOwner,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
@@ -86,7 +90,7 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 			rev = s
 		}
 		i := inventory.NewInventory(cm.GetName(), cm.GetNamespace())
-		if err := resMgr.GetInventory(ctx, i); err != nil {
+		if err := invStorage.GetInventory(ctx, i); err != nil {
 			return err
 		}
 		row := []string{cm.GetName(), fmt.Sprintf("%v", len(i.Entries)), source, rev, ts}

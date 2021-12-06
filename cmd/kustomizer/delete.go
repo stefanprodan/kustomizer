@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"time"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
 )
 
@@ -75,10 +73,15 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+
+	invStorage := &inventory.InventoryStorage{
+		Manager: resMgr,
+		Owner:   inventoryOwner,
+	}
 
 	inv := inventory.NewInventory(deleteArgs.inventoryName, deleteArgs.inventoryNamespace)
-	if err := resMgr.GetInventory(ctx, inv); err != nil {
+	if err := invStorage.GetInventory(ctx, inv); err != nil {
 		return err
 	}
 
@@ -89,9 +92,9 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 
 	logger.Println(fmt.Sprintf("deleting %v manifest(s)...", len(objects)))
 	hasErrors := false
-	sort.Sort(sort.Reverse(objectutil.SortableUnstructureds(objects)))
+	sort.Sort(sort.Reverse(ssa.SortableUnstructureds(objects)))
 	for _, object := range objects {
-		change, err := resMgr.Delete(ctx, object)
+		change, err := resMgr.Delete(ctx, object, ssa.DefaultDeleteOptions())
 		if err != nil {
 			logger.Println(`✗`, err)
 			hasErrors = true
@@ -104,15 +107,17 @@ func deleteCmdRun(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	if err := resMgr.DeleteInventory(ctx, inv); err != nil {
+	if err := invStorage.DeleteInventory(ctx, inv); err != nil {
 		return err
 	}
 
 	logger.Println(fmt.Sprintf("ConfigMap/%s/%s deleted", deleteArgs.inventoryNamespace, deleteArgs.inventoryName))
 
 	if deleteArgs.wait {
+		waitOpts := ssa.DefaultWaitOptions()
+		waitOpts.Timeout = rootArgs.timeout
 		logger.Println("waiting for resources to be terminated...")
-		err = resMgr.WaitForTermination(objects, 2*time.Second, rootArgs.timeout)
+		err = resMgr.WaitForTermination(objects, waitOpts)
 		if err != nil {
 			return err
 		}
