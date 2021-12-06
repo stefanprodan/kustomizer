@@ -20,14 +20,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/fluxcd/pkg/ssa"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"sync"
-
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -77,13 +76,13 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 
 	switch buildArgs.output {
 	case "yaml":
-		yml, err := objectutil.ObjectsToYAML(objects)
+		yml, err := ssa.ObjectsToYAML(objects)
 		if err != nil {
 			return err
 		}
 		fmt.Println(yml)
 	case "json":
-		json, err := objectutil.ObjectsToJSON(objects)
+		json, err := ssa.ObjectsToJSON(objects)
 		if err != nil {
 			return err
 		}
@@ -103,7 +102,7 @@ func buildManifests(kustomizePath string, filePaths []string, patchPaths []strin
 			return nil, err
 		}
 
-		objs, err := objectutil.ReadObjects(bytes.NewReader(data))
+		objs, err := ssa.ReadObjects(bytes.NewReader(data))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", kustomizePath, err)
 		}
@@ -121,14 +120,14 @@ func buildManifests(kustomizePath string, filePaths []string, patchPaths []strin
 				return nil, err
 			}
 
-			objs, err := objectutil.ReadObjects(bufio.NewReader(ms))
+			objs, err := ssa.ReadObjects(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", manifest, err)
 			}
 
 			for _, obj := range objs {
-				if objectutil.IsKubernetesObject(obj) && !objectutil.IsKustomization(obj) {
+				if ssa.IsKubernetesObject(obj) && !ssa.IsKustomization(obj) {
 					objects = append(objects, obj)
 				}
 			}
@@ -142,7 +141,7 @@ func buildManifests(kustomizePath string, filePaths []string, patchPaths []strin
 				return nil, err
 			}
 
-			objs, err := objectutil.ReadObjects(bytes.NewReader(data))
+			objs, err := ssa.ReadObjects(bytes.NewReader(data))
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", kustomizePath, err)
 			}
@@ -150,7 +149,7 @@ func buildManifests(kustomizePath string, filePaths []string, patchPaths []strin
 		}
 	}
 
-	sort.Sort(objectutil.SortableUnstructureds(objects))
+	sort.Sort(ssa.SortableUnstructureds(objects))
 	return objects, nil
 }
 
@@ -280,7 +279,7 @@ func applyPatches(kFilePath string, objects []*unstructured.Unstructured) ([]byt
 
 	const input = "resources.yaml"
 	kustomization.Resources = append(kustomization.Resources, input)
-	yml, err := objectutil.ObjectsToYAML(objects)
+	yml, err := ssa.ObjectsToYAML(objects)
 	if err != nil {
 		return nil, err
 	}

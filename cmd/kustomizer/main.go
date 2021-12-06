@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/stefanprodan/kustomizer/pkg/manager"
+	"github.com/fluxcd/pkg/ssa"
 	"os"
 	"path"
 	"time"
@@ -47,7 +47,7 @@ type rootFlags struct {
 var (
 	rootArgs       = rootFlags{}
 	logger         = stderrLogger{stderr: os.Stderr}
-	inventoryOwner = manager.Owner{
+	inventoryOwner = ssa.Owner{
 		Field: "kustomizer",
 		Group: "inventory.kustomizer.dev",
 	}

@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/manager"
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 )
 
 var diffCmd = &cobra.Command{
@@ -84,7 +83,12 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
 
-	resMgr := manager.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
+
+	invStorage := &inventory.InventoryStorage{
+		Manager: resMgr,
+		Owner:   inventoryOwner,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
@@ -102,11 +106,11 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		if change.Action == string(manager.CreatedAction) {
+		if change.Action == string(ssa.CreatedAction) {
 			fmt.Println(`►`, change.Subject, "created")
 		}
 
-		if change.Action == string(manager.ConfiguredAction) {
+		if change.Action == string(ssa.ConfiguredAction) {
 			fmt.Println(`►`, change.Subject, "drifted")
 			fmt.Println(change.Diff)
 		}
@@ -114,13 +118,13 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if diffArgs.inventoryName != "" {
-		staleObjects, err := resMgr.GetInventoryStaleObjects(ctx, newInventory)
+		staleObjects, err := invStorage.GetInventoryStaleObjects(ctx, newInventory)
 		if err != nil {
 			return fmt.Errorf("inventory query failed, error: %w", err)
 		}
 
 		for _, object := range staleObjects {
-			fmt.Println(`►`, fmt.Sprintf("%s deleted", objectutil.FmtUnstructured(object)))
+			fmt.Println(`►`, fmt.Sprintf("%s deleted", ssa.FmtUnstructured(object)))
 		}
 	}
 

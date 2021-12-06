@@ -1,6 +1,5 @@
 /*
 Copyright 2021 Stefan Prodan
-Copyright 2021 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +17,8 @@ limitations under the License.
 package inventory
 
 import (
+	"github.com/fluxcd/pkg/ssa"
 	"sort"
-
-	"github.com/stefanprodan/kustomizer/pkg/objectutil"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -72,9 +70,13 @@ func (inv *Inventory) SetSource(url, revision string) {
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.
 func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
-	sort.Sort(objectutil.SortableUnstructureds(objects))
+	sort.Sort(ssa.SortableUnstructureds(objects))
 	for _, om := range objects {
-		objMetadata := object.UnstructuredToObjMeta(om)
+		objMetadata, err := object.UnstructuredToObjMeta(om)
+		if err != nil {
+			return err
+		}
+
 		gv, err := schema.ParseGroupVersion(om.GetAPIVersion())
 		if err != nil {
 			return err
@@ -120,12 +122,12 @@ func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 		objects = append(objects, u)
 	}
 
-	sort.Sort(objectutil.SortableUnstructureds(objects))
+	sort.Sort(ssa.SortableUnstructureds(objects))
 	return objects, nil
 }
 
 // ListMeta returns the inventory entries as object.ObjMetadata objects.
-func (inv *Inventory) ListMeta() ([]object.ObjMetadata, error) {
+func (inv *Inventory) ListMeta() (object.ObjMetadataSet, error) {
 	var metas []object.ObjMetadata
 	for _, e := range inv.Entries {
 		m, err := object.ParseObjMetadata(e.ObjectID)
@@ -151,7 +153,7 @@ func (inv *Inventory) Diff(target *Inventory) ([]*unstructured.Unstructured, err
 		return nil, err
 	}
 
-	list := object.SetDiff(aList, bList)
+	list := aList.Diff(bList)
 	if len(list) == 0 {
 		return objects, nil
 	}
@@ -168,6 +170,6 @@ func (inv *Inventory) Diff(target *Inventory) ([]*unstructured.Unstructured, err
 		objects = append(objects, u)
 	}
 
-	sort.Sort(objectutil.SortableUnstructureds(objects))
+	sort.Sort(ssa.SortableUnstructureds(objects))
 	return objects, nil
 }
