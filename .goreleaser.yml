@@ -39,3 +39,8 @@ archives:
     format: zip
     files:
       - LICENSE
+signs:
+  - cmd: cosign
+    stdin: '{{ .Env.COSIGN_PASSWORD }}'
+    args: ["sign-blob", "--key=/tmp/cosign.key", "--output=${signature}", "${artifact}"]
+    artifacts: all
