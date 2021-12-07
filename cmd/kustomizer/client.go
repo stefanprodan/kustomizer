@@ -19,14 +19,11 @@ package main
 
 import (
 	"fmt"
-	"runtime"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -39,8 +36,8 @@ func newScheme() *apiruntime.Scheme {
 	return scheme
 }
 
-func newKubeClient(kubeConfigPath string, kubeContext string) (client.WithWatch, error) {
-	cfg, err := newKubeConfig(kubeConfigPath, kubeContext)
+func newKubeClient(rcg genericclioptions.RESTClientGetter) (client.WithWatch, error) {
+	cfg, err := newKubeConfig(rcg)
 	if err != nil {
 		return nil, fmt.Errorf("kubernetes client initialization failed: %w", err)
 	}
@@ -55,8 +52,8 @@ func newKubeClient(kubeConfigPath string, kubeContext string) (client.WithWatch,
 	return kubeClient, nil
 }
 
-func newKubeStatusPoller(kubeConfigPath string, kubeContext string) (*polling.StatusPoller, error) {
-	kubeConfig, err := newKubeConfig(kubeConfigPath, kubeContext)
+func newKubeStatusPoller(rcg genericclioptions.RESTClientGetter) (*polling.StatusPoller, error) {
+	kubeConfig, err := newKubeConfig(rcg)
 	if err != nil {
 		return nil, err
 	}
@@ -73,19 +70,8 @@ func newKubeStatusPoller(kubeConfigPath string, kubeContext string) (*polling.St
 	return polling.NewStatusPoller(c, restMapper), nil
 }
 
-func newKubeConfig(kubeConfigPath string, kubeContext string) (*rest.Config, error) {
-	configFiles := splitKubeConfigPath(kubeConfigPath)
-	configOverrides := clientcmd.ConfigOverrides{}
-
-	if len(kubeContext) > 0 {
-		configOverrides.CurrentContext = kubeContext
-	}
-
-	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{Precedence: configFiles},
-		&configOverrides,
-	).ClientConfig()
-
+func newKubeConfig(rcg genericclioptions.RESTClientGetter) (*rest.Config, error) {
+	cfg, err := rcg.ToRESTConfig()
 	if err != nil {
 		return nil, fmt.Errorf("kubeconfig load failed: %w", err)
 	}
@@ -94,15 +80,4 @@ func newKubeConfig(kubeConfigPath string, kubeContext string) (*rest.Config, err
 	cfg.Burst = 100
 
 	return cfg, nil
-}
-
-func splitKubeConfigPath(path string) []string {
-	var sep string
-	switch runtime.GOOS {
-	case "windows":
-		sep = ";"
-	default:
-		sep = ":"
-	}
-	return strings.Split(path, sep)
 }
