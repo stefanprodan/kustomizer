@@ -20,9 +20,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
 )
@@ -97,9 +101,19 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		resMgr.SetOwnerLabels(objects, diffArgs.inventoryName, diffArgs.inventoryNamespace)
 	}
 
+	if _, err := exec.LookPath("diff"); err != nil {
+		return fmt.Errorf("diff binary not found in PATH, error: %w", err)
+	}
+
+	tmpDir, err := os.MkdirTemp("", diffArgs.inventoryName)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
 	invalid := false
 	for _, object := range objects {
-		change, err := resMgr.Diff(ctx, object)
+		change, liveObject, mergedObject, err := resMgr.Diff(ctx, object)
 		if err != nil {
 			logger.Println(`✗`, err)
 			invalid = true
@@ -112,9 +126,26 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 
 		if change.Action == string(ssa.ConfiguredAction) {
 			fmt.Println(`►`, change.Subject, "drifted")
-			fmt.Println(change.Diff)
-		}
 
+			liveYAML, _ := yaml.Marshal(liveObject)
+			liveFile := filepath.Join(tmpDir, "live.yaml")
+			if err := os.WriteFile(liveFile, liveYAML, 0644); err != nil {
+				return err
+			}
+
+			mergedYAML, _ := yaml.Marshal(mergedObject)
+			mergedFile := filepath.Join(tmpDir, "merged.yaml")
+			if err := os.WriteFile(mergedFile, mergedYAML, 0644); err != nil {
+				return err
+			}
+
+			out, _ := exec.Command("diff", "-N", "-u", liveFile, mergedFile).Output()
+			for i, line := range strings.Split(string(out), "\n") {
+				if i > 1 && len(line) > 0 {
+					fmt.Println(line)
+				}
+			}
+		}
 	}
 
 	if diffArgs.inventoryName != "" {

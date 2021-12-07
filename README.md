@@ -56,6 +56,8 @@ git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
+### Create resources
+
 Apply a local directory that contains Kubernetes manifests:
 
 ```console
@@ -88,6 +90,8 @@ waits for the workloads to be rolled out.
 To apply Kustomize overlays, you can use `kustomizer apply -k path/to/overlay`,
 for more details see `kustomizer apply --help`.
 
+### List inventories
+
 After applying the resources, Kustomizer creates an inventory.
 You can list all inventories in a specific namespace with:
 
@@ -95,8 +99,10 @@ You can list all inventories in a specific namespace with:
 $ kustomizer get inventories -n default
 
 NAME	ENTRIES	SOURCE                                        	REVISION	LAST APPLIED         
-demo	10     	https://github.com/stefanprodan/kustomizer.git	e44c210 	2021-09-06T16:33:08Z
+demo	10     	https://github.com/stefanprodan/kustomizer.git	e44c210 	2021-12-06T16:33:08Z
 ```
+
+### List resources
 
 You can list the Kubernetes objects in an inventory with:
 
@@ -123,7 +129,9 @@ Entries:
 The inventory records are used to track which objects are subject to garbage collection.
 The inventory is persistent on the cluster as a ConfigMap.
 
-Change the min replicas of the `backend` HPA and remove the `frontend` and the `rbac` manifests from the local dir:
+### Diff changes
+
+Change the max replicas of the `backend` HPA and remove the `frontend` and the `rbac` manifests from the local dir:
 
 ```bash
 rm -rf testdata/plain/frontend
@@ -136,25 +144,25 @@ Preview the changes using diff:
 $ kustomizer diff -i demo -f ./testdata/plain/ --prune
 
 ► HorizontalPodAutoscaler/kustomizer-demo/backend drifted
-  (
-  	"""
-  	... // 18 identical lines
-  	        type: Utilization
-  	    type: Resource
-- 	  minReplicas: 2
-+ 	  minReplicas: 1
-  	  scaleTargetRef:
-  	    apiVersion: apps/v1
-  	... // 32 identical lines
-  	"""
-  )
-
+@@ -11,7 +11,7 @@
+         resourceVersion: "572967"
+         uid: ca841aab-46b9-4a51-8e44-3cf5f615791d
+     spec:
+-        maxReplicas: 4
++        maxReplicas: 5
+         metrics:
+             - resource:
+                 name: cpu
 ► ClusterRole/kustomizer-demo-read-only deleted
 ► ClusterRoleBinding/kustomizer-demo-read-only deleted
 ► Service/kustomizer-demo/frontend deleted
 ► Deployment/kustomizer-demo/frontend deleted
 ► HorizontalPodAutoscaler/kustomizer-demo/frontend deleted
 ```
+
+Note that when diffing Kubernetes secrets, kustomizer masks the secret values in the output.
+
+### Update resources
 
 Rerun the apply command:
 
@@ -179,6 +187,8 @@ all resources are ready
 
 After applying the resources, Kustomizer removes the Kubernetes objects that are not present in the current inventory.
 Kustomizer garbage collector deletes the namespaced objects first then it removes the non-namspaced ones.
+
+### Delete resources
 
 Delete all the Kubernetes objects belonging to an inventory including the inventory ConfigMap:
 
