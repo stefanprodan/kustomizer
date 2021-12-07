@@ -17,12 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"github.com/fluxcd/pkg/ssa"
 	"os"
-	"path"
 	"time"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
@@ -39,9 +39,7 @@ var rootCmd = &cobra.Command{
 }
 
 type rootFlags struct {
-	kubeconfig  string
-	kubecontext string
-	timeout     time.Duration
+	timeout time.Duration
 }
 
 var (
@@ -53,41 +51,21 @@ var (
 	}
 )
 
+var kubeconfigArgs = genericclioptions.NewConfigFlags(false)
+
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubeconfig, "kubeconfig", "", "",
-		"Absolute path to the kubeconfig file.")
-	rootCmd.PersistentFlags().StringVarP(&rootArgs.kubecontext, "context", "", "",
-		"The Kubernetes context to use.")
 	rootCmd.PersistentFlags().DurationVar(&rootArgs.timeout, "timeout", time.Minute,
 		"The length of time to wait before giving up on the current operation.")
+
+	kubeconfigArgs.Timeout = nil
+	kubeconfigArgs.AddFlags(rootCmd.PersistentFlags())
 
 	rootCmd.DisableAutoGenTag = true
 }
 
 func main() {
-	configureKubeconfig()
-
 	if err := rootCmd.Execute(); err != nil {
 		logger.Println(`✗`, err)
 		os.Exit(1)
 	}
-}
-
-func configureKubeconfig() {
-	switch {
-	case len(rootArgs.kubeconfig) > 0:
-	case len(os.Getenv("KUBECONFIG")) > 0:
-		rootArgs.kubeconfig = os.Getenv("KUBECONFIG")
-	default:
-		if home := homeDir(); len(home) > 0 {
-			rootArgs.kubeconfig = path.Join(home, ".kube", "config")
-		}
-	}
-}
-
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
 }

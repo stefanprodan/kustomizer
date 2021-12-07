@@ -77,12 +77,12 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
 
-	kubeClient, err := newKubeClient(rootArgs.kubeconfig, rootArgs.kubecontext)
+	kubeClient, err := newKubeClient(kubeconfigArgs)
 	if err != nil {
 		return fmt.Errorf("client init failed: %w", err)
 	}
 
-	statusPoller, err := newKubeStatusPoller(rootArgs.kubeconfig, rootArgs.kubecontext)
+	statusPoller, err := newKubeStatusPoller(kubeconfigArgs)
 	if err != nil {
 		return fmt.Errorf("status poller init failed: %w", err)
 	}
