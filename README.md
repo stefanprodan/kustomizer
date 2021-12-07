@@ -27,8 +27,11 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
 Install the latest release on macOS or Linux with [this script](install/README.md):
 
 ```bash
-curl -s https://kustomizer.dev/install.sh | bash
+curl -s https://kustomizer.dev/install.sh | sudo bash
 ```
+
+If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
+of the release using the public key from [kustomizer.dev/verify/cosign.pub](https://kustomizer.dev/verify/cosign.pub).
 
 Or from source with Go:
 

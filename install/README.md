@@ -8,10 +8,20 @@ curl -s https://raw.githubusercontent.com/stefanprodan/kustomizer/main/install/k
 
 The install script does the following:
 * attempts to detect your OS
-* downloads and unpacks the [release tar file](https://github.com/stefanprodan/kustomizer/releases) in a temporary directory
+* downloads the [release tar file](https://github.com/stefanprodan/kustomizer/releases) and its signature in a temporary directory
+* verifies the [cosign](https://github.com/sigstore/cosign) signature with [kustomizer.dev/verify/cosign.pub](https://kustomizer.dev/verify/cosign.pub)
+* unpacks the release tar file
 * verifies the binary checksum
 * copies the kustomizer binary to `/usr/local/bin`
 * removes the temporary directory
+
+## Install from source
+
+Using Go >= 1.17:
+
+```sh
+go install github.com/stefanprodan/kustomizer/cmd/kustomizer@latest
+```
 
 ## Build from source
 
@@ -22,7 +32,7 @@ git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
-Build the kustomizer binary (requires go >= 1.16):
+Build the kustomizer binary (requires go >= 1.17):
 
 ```bash
 make build

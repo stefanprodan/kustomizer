@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 #  Copyright 2021 Stefan Prodan
-#  Copyright 2020 The Flux authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -20,6 +19,7 @@ set -e
 DEFAULT_BIN_DIR="/usr/local/bin"
 BIN_DIR=${1:-"${DEFAULT_BIN_DIR}"}
 GITHUB_REPO="stefanprodan/kustomizer"
+COSIGN_PUB_KEY="https://kustomizer.dev/verify/cosign.pub"
 
 # Helper functions for logs
 info() {
@@ -82,7 +82,7 @@ verify_downloader() {
     return 0
 }
 
-# Create tempory directory and cleanup when done
+# Create temporary directory and cleanup when done
 setup_tmp() {
     TMP_DIR=$(mktemp -d -t kustomizer-install.XXXXXXXXXX)
     TMP_METADATA="${TMP_DIR}/kustomizer.json"
@@ -149,6 +149,8 @@ download_binary() {
     BIN_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_${OS}_${ARCH}.tar.gz"
     info "Downloading binary ${BIN_URL}"
     download "${TMP_BIN}" "${BIN_URL}"
+    info "Downloading signature ${BIN_URL}.sig"
+    download "${TMP_BIN}.sig" "${BIN_URL}.sig"
 }
 
 compute_sha256sum() {
@@ -176,6 +178,21 @@ verify_binary() {
     fi
 }
 
+# Verify the signature
+verify_signature() {
+  if [[ -x "$(which "cosign")" ]]
+  then
+    info "Verifying signature with cosign"
+    if cosign verify-blob --key "${COSIGN_PUB_KEY}" --signature "${TMP_BIN}.sig" "${TMP_BIN}" > /dev/null 2>&1; then
+       info "Verified OK"
+    else
+       fatal "Failed to verify signature"
+    fi
+  else
+    info "Verifying signature skipped, cosign not found in PATH"
+  fi
+}
+
 # Setup permissions and move binary
 setup_binary() {
     chmod 755 "${TMP_BIN}"
@@ -200,5 +217,6 @@ setup_binary() {
     download_hash
     download_binary
     verify_binary
+    verify_signature
     setup_binary
 }
