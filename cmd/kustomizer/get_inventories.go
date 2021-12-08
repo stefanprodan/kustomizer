@@ -20,12 +20,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/fluxcd/pkg/ssa"
-	"io"
-	"os"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"io"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -97,7 +95,7 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 		rows = append(rows, row)
 	}
 
-	printTable(os.Stdout, []string{"name", "entries", "source", "revision", "last applied"}, rows)
+	printTable(rootCmd.OutOrStdout(), []string{"name", "entries", "source", "revision", "last applied"}, rows)
 
 	return nil
 }

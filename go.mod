@@ -4,7 +4,9 @@ go 1.17
 
 require (
 	github.com/fluxcd/pkg/ssa v0.5.0
+	github.com/mattn/go-shellwords v1.0.12
 	github.com/olekukonko/tablewriter v0.0.4
+	github.com/onsi/gomega v1.15.0
 	github.com/spf13/cobra v1.1.3
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2

@@ -61,6 +61,7 @@ func init() {
 	kubeconfigArgs.AddFlags(rootCmd.PersistentFlags())
 
 	rootCmd.DisableAutoGenTag = true
+	rootCmd.SetOut(os.Stdout)
 }
 
 func main() {
