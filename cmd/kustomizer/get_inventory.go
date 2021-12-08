@@ -71,16 +71,16 @@ func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(fmt.Sprintf("Inventory: %s/%s", i.Namespace, i.Name))
-	fmt.Println(fmt.Sprintf("Source: %s", i.Source))
-	fmt.Println(fmt.Sprintf("Revision: %s", i.Revision))
-	fmt.Println("Entries:")
+	rootCmd.Println(fmt.Sprintf("Inventory: %s/%s", i.Namespace, i.Name))
+	rootCmd.Println(fmt.Sprintf("Source: %s", i.Source))
+	rootCmd.Println(fmt.Sprintf("Revision: %s", i.Revision))
+	rootCmd.Println("Entries:")
 	entries, err := i.ListMeta()
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		fmt.Println("-", ssa.FmtObjMetadata(entry))
+		rootCmd.Println("-", ssa.FmtObjMetadata(entry))
 	}
 
 	return nil
