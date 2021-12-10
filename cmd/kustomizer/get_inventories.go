@@ -40,7 +40,7 @@ func init() {
 
 func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 
-	if getArgs.namespace == "" {
+	if kubeconfigArgs.Namespace == nil {
 		return fmt.Errorf("you must specify an intentory namespace")
 	}
 
@@ -65,7 +65,7 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	list := &corev1.ConfigMapList{}
-	err = resMgr.Client().List(ctx, list, client.InNamespace(getArgs.namespace), client.MatchingLabels{
+	err = resMgr.Client().List(ctx, list, client.InNamespace(*kubeconfigArgs.Namespace), client.MatchingLabels{
 		"app.kubernetes.io/component":  "inventory",
 		"app.kubernetes.io/created-by": "kustomizer",
 	})

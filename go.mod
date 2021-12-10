@@ -3,7 +3,7 @@ module github.com/stefanprodan/kustomizer
 go 1.17
 
 require (
-	github.com/fluxcd/pkg/ssa v0.5.0
+	github.com/fluxcd/pkg/ssa v0.6.1
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/gomega v1.15.0

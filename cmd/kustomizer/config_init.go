@@ -18,13 +18,30 @@ package main
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/stefanprodan/kustomizer/pkg/config"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories and their source revision.",
+var configInit = &cobra.Command{
+	Use:   "init",
+	Short: "Init writes a config file with default values at '$HOME/.kustomizer/config'.",
+	RunE:  runConfigInitCmd,
 }
 
 func init() {
-	rootCmd.AddCommand(getCmd)
+	configCmd.AddCommand(configInit)
+}
+
+func runConfigInitCmd(cmd *cobra.Command, args []string) error {
+	cfgPath, err := config.DefaultConfigPath()
+	if err != nil {
+		return err
+	}
+
+	c := config.NewConfig()
+	if err := c.Write(""); err != nil {
+		return err
+	}
+
+	logger.Println("config written to", cfgPath)
+	return nil
 }

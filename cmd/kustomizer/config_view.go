@@ -18,13 +18,25 @@ package main
 
 import (
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories and their source revision.",
+var configView = &cobra.Command{
+	Use: "view",
+	Short: "Display the config values from '$HOME/.kustomizer/config'. " +
+		"If no config file is found, the default in-memory values are displayed.",
+	RunE: runConfigViewCmd,
 }
 
 func init() {
-	rootCmd.AddCommand(getCmd)
+	configCmd.AddCommand(configView)
+}
+
+func runConfigViewCmd(cmd *cobra.Command, args []string) error {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	rootCmd.Println(string(data))
+	return nil
 }

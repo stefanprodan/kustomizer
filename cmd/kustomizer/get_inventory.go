@@ -41,11 +41,8 @@ func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("you must specify an intentory name")
 	}
 	name := args[0]
-	if getArgs.namespace == "" {
-		return fmt.Errorf("you must specify a namespace")
-	}
 
-	i := inventory.NewInventory(name, getArgs.namespace)
+	i := inventory.NewInventory(name, *kubeconfigArgs.Namespace)
 
 	kubeClient, err := newKubeClient(kubeconfigArgs)
 	if err != nil {

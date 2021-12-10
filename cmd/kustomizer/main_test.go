@@ -151,7 +151,6 @@ func executeCommand(cmd string) (string, error) {
 
 func resetCmdArgs() {
 	applyArgs = applyFlags{}
-	getArgs = getFlags{}
 	buildArgs = buildFlags{}
 }
 
