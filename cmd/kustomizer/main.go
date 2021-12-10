@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"github.com/stefanprodan/kustomizer/pkg/config"
 )
 
 var VERSION = "1.0.0-dev.0"
@@ -45,9 +48,10 @@ type rootFlags struct {
 var (
 	rootArgs       = rootFlags{}
 	logger         = stderrLogger{stderr: os.Stderr}
+	cfg            = config.NewConfig()
 	inventoryOwner = ssa.Owner{
-		Field: "kustomizer",
-		Group: "inventory.kustomizer.dev",
+		Field: cfg.FieldManager.Name,
+		Group: cfg.FieldManager.Group,
 	}
 )
 
@@ -65,8 +69,26 @@ func init() {
 }
 
 func main() {
+	loadConfig()
 	if err := rootCmd.Execute(); err != nil {
 		logger.Println(`✗`, err)
 		os.Exit(1)
+	}
+}
+
+func loadConfig() {
+	if c, err := config.Read(""); err != nil {
+		logger.Println(`✗`, fmt.Errorf("loading the config failed, error: %w", err))
+	} else {
+		cfg = c
+	}
+
+	ssa.ReconcileOrder = ssa.KindOrder{
+		First: cfg.ApplyOrder.First,
+		Last:  cfg.ApplyOrder.Last,
+	}
+	inventoryOwner = ssa.Owner{
+		Field: cfg.FieldManager.Name,
+		Group: cfg.FieldManager.Group,
 	}
 }

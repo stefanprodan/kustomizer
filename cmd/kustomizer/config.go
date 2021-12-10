@@ -20,11 +20,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories and their source revision.",
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Manage kustomizer config files.",
 }
 
 func init() {
-	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(configCmd)
 }

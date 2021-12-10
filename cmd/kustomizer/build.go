@@ -74,19 +74,21 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	sort.Sort(ssa.SortableUnstructureds(objects))
+
 	switch buildArgs.output {
 	case "yaml":
 		yml, err := ssa.ObjectsToYAML(objects)
 		if err != nil {
 			return err
 		}
-		fmt.Println(yml)
+		rootCmd.Println(yml)
 	case "json":
 		json, err := ssa.ObjectsToJSON(objects)
 		if err != nil {
 			return err
 		}
-		fmt.Println(json)
+		rootCmd.Println(json)
 	default:
 		return fmt.Errorf("unsupported output, can be yaml or json")
 	}
@@ -149,7 +151,6 @@ func buildManifests(kustomizePath string, filePaths []string, patchPaths []strin
 		}
 	}
 
-	sort.Sort(ssa.SortableUnstructureds(objects))
 	return objects, nil
 }
 

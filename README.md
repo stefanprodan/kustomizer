@@ -48,7 +48,13 @@ The Kustomize CLI offers the following commands:
 * `get`    Prints the content of inventories and their source revision.
 * `diff`   Diff compares the local Kubernetes manifests with the in-cluster objects and prints the YAML diff to stdout.
 * `delete` Delete removes the Kubernetes objects in the inventory from the cluster and waits for termination.
+* `config` Manage kustomizer config files.
 * `completion` Generates completion scripts for bash, fish, powershell and zsh.
+* `help`       Help about any command.
+
+To connect to Kubernetes API, Kustomizer uses the current context from `~/.kube/config`.
+You can set a different context with `--context`.
+You can also specify a different kubeconfig with `--kubeconfig` or with the `KUBECONFIG` env var.
 
 ## Get Started
 

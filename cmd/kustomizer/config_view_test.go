@@ -17,14 +17,18 @@ limitations under the License.
 package main
 
 import (
-	"github.com/spf13/cobra"
+	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get prints the content of inventories and their source revision.",
-}
+func TestConfigView(t *testing.T) {
+	g := NewWithT(t)
+	kind := "NetworkPolicy"
+	cfg.ApplyOrder.First = append(cfg.ApplyOrder.First, kind)
+	output, err := executeCommand("config view")
 
-func init() {
-	rootCmd.AddCommand(getCmd)
+	g.Expect(err).NotTo(HaveOccurred())
+	t.Logf("\n%s", output)
+	g.Expect(output).To(MatchRegexp(kind))
 }
