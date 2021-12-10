@@ -24,11 +24,11 @@ install-plugin:
 	CGO_ENABLED=0 go build -o /usr/local/bin/kubectl-kustomizer ./cmd/kustomizer
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-ENVTEST_AKUBERNETES_VERSION=latest
+ENVTEST_KUBERNETES_VERSION=latest
 install-envtest: setup-envtest
-	$(SETUP_ENVTEST) use $(ENVTEST_AKUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR)
+	$(SETUP_ENVTEST) use $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR)
 
-KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) use -i $(ENVTEST_AKUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
+KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) use -i $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
 test: tidy fmt vet install-envtest
 	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -parallel 4 -coverprofile cover.out
 
