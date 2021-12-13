@@ -31,7 +31,7 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Pull downloads Kubernetes manifests from an OCI registry.",
+	Short: "Pull downloads Kubernetes manifests from a container registry.",
 	Long: `The pull command downloads the specified OCI artifact and writes the Kubernetes manifests to stdout.
 For private registries, the pull command uses the credentials from '~/.docker/config.json'.`,
 	Example: `  # Pull Kubernetes manifests from an OCI artifact hosted on Docker Hub
@@ -39,6 +39,9 @@ For private registries, the pull command uses the credentials from '~/.docker/co
 
   # Pull an OCI artifact using the digest 
   kustomizer pull docker.io/user/repo@sha256:<digest>
+
+  # Pull the latest artifact from a local registry
+  kustomizer pull localhost:5000/repo
 
   # Apply Kubernetes manifests from an OCI artifact 
   kustomizer pull docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
@@ -80,7 +83,7 @@ func runPullCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if _, ok := manifest.Annotations["kustomizer.dev/version"]; !ok {
-		return fmt.Errorf("'kustomizer.dev/version' annotation not found in the OCI manifest")
+		return fmt.Errorf("'kustomizer.dev/version' annotation not found in the image manifest")
 	}
 
 	checksum, ok := manifest.Annotations["kustomizer.dev/checksum"]
@@ -94,7 +97,7 @@ func runPullCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(layers) < 1 {
-		return fmt.Errorf("no layers not found")
+		return fmt.Errorf("no layers found in the %s image", url)
 	}
 
 	blob, err := layers[0].Uncompressed()

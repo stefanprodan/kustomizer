@@ -36,7 +36,7 @@ import (
 
 var pushCmd = &cobra.Command{
 	Use:   "push",
-	Short: "Push Kubernetes manifests to an OCI registry.",
+	Short: "Push uploads Kubernetes manifests to a container registry.",
 	Long: `The push command scans the given path for Kubernetes manifests or Kustomize overlays,
 builds the manifests into a multi-doc YAML, packages the YAML file into an OCI artifact and
 pushes the artifact to the specified image repository.
@@ -46,6 +46,9 @@ The push command uses the credentials from '~/.docker/config.json'.`,
 
   # Build a Kustomize overlay and push the resulting multi-doc YAML to GitHub Container Registry
   kustomizer push -k ./deploy/production ghcr.io/user/repo:v1.0.0
+
+  # Push to a local registry
+  kustomizer push -f ./deploy/manifests localhost:5000/repo:latest
 `,
 	RunE: runPushCmd,
 }
