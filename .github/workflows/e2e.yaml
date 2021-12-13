@@ -9,6 +9,11 @@ on:
 jobs:
   kind:
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -50,6 +55,11 @@ jobs:
         run: |
           echo "token=kustomizer-test" > testdata/kustomize/secret.conf
           ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '*****"
+      - name: Test push/pull/apply
+        run: |
+          ./bin/kustomizer push -k testdata/kustomize/ localhost:5000/test:kustomize
+          ./bin/kustomizer pull localhost:5000/test:kustomize | grep tests.testing.kustomizer.dev
+          ./bin/kustomizer pull localhost:5000/test:kustomize | ./bin/kustomizer apply -i kustomizer-test -f-
       - name: Test apply --filename
         run: |
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
