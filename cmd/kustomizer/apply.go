@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"sort"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
@@ -79,10 +82,26 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
-	logger.Println("building inventory...")
-	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename, applyArgs.patch)
-	if err != nil {
-		return err
+	var objects []*unstructured.Unstructured
+
+	if len(applyArgs.filename) == 1 && applyArgs.filename[0] == "-" {
+		data, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
+		objs, err := ssa.ReadObjects(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		objects = objs
+	} else {
+		logger.Println("building inventory...")
+		objs, err := buildManifests(applyArgs.kustomize, applyArgs.filename, applyArgs.patch)
+		if err != nil {
+			return err
+		}
+		objects = objs
 	}
 
 	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)

@@ -80,6 +80,7 @@ func runPushCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("-f or -k is required")
 	}
 
+	logger.Println("building manifests...")
 	objects, err := buildManifests(pushArgs.kustomize, pushArgs.filename, pushArgs.patch)
 	if err != nil {
 		return err
@@ -128,18 +129,22 @@ func runPushCmd(cmd *cobra.Command, args []string) error {
 		}),
 	)
 
+	logger.Println("pushing image...")
 	if err := crane.Push(img, url, options...); err != nil {
-		return fmt.Errorf("pushing image %s: %w", url, err)
+		return fmt.Errorf("pushing image failed: %w", err)
 	}
+
 	ref, err := name.ParseReference(url)
 	if err != nil {
-		return fmt.Errorf("parsing reference %s: %w", url, err)
+		return fmt.Errorf("parsing reference failed: %w", err)
 	}
+
 	d, err := img.Digest()
 	if err != nil {
-		return fmt.Errorf("digest: %w", err)
+		return fmt.Errorf("parsing digest failed: %w", err)
 	}
-	fmt.Println(ref.Context().Digest(d.String()))
+
+	logger.Println("digest:", ref.Context().Digest(d.String()))
 
 	return nil
 }

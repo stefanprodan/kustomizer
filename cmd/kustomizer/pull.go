@@ -36,6 +36,12 @@ var pullCmd = &cobra.Command{
 For private registries, the pull command uses the credentials from '~/.docker/config.json'.`,
 	Example: `  # Pull Kubernetes manifests from an OCI artifact hosted on Docker Hub
   kustomizer pull docker.io/user/repo:v1.0.0
+
+  # Pull an OCI artifact using the digest 
+  kustomizer pull docker.io/user/repo@sha256:<digest>
+
+  # Apply Kubernetes manifests from an OCI artifact 
+  kustomizer pull docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
 `,
 	RunE: runPullCmd,
 }

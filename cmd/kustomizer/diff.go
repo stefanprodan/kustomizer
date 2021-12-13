@@ -17,8 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,6 +28,7 @@ import (
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
@@ -67,9 +70,25 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("-f or -k is required")
 	}
 
-	objects, err := buildManifests(diffArgs.kustomize, diffArgs.filename, diffArgs.patch)
-	if err != nil {
-		return err
+	var objects []*unstructured.Unstructured
+
+	if len(diffArgs.filename) == 1 && diffArgs.filename[0] == "-" {
+		data, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
+		objs, err := ssa.ReadObjects(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		objects = objs
+	} else {
+		objs, err := buildManifests(diffArgs.kustomize, diffArgs.filename, diffArgs.patch)
+		if err != nil {
+			return err
+		}
+		objects = objs
 	}
 
 	newInventory := inventory.NewInventory(diffArgs.inventoryName, diffArgs.inventoryNamespace)
