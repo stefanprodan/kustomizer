@@ -17,16 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"archive/tar"
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"io"
-	"strings"
 
-	"github.com/google/go-containerregistry/pkg/crane"
-	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
+
+	"github.com/stefanprodan/kustomizer/pkg/registry"
 )
 
 var pullCmd = &cobra.Command{
@@ -35,16 +31,16 @@ var pullCmd = &cobra.Command{
 	Long: `The pull command downloads the specified OCI artifact and writes the Kubernetes manifests to stdout.
 For private registries, the pull command uses the credentials from '~/.docker/config.json'.`,
 	Example: `  # Pull Kubernetes manifests from an OCI artifact hosted on Docker Hub
-  kustomizer pull docker.io/user/repo:v1.0.0
+  kustomizer pull oci://docker.io/user/repo:v1.0.0 > manifests.yaml
 
-  # Pull an OCI artifact using the digest 
-  kustomizer pull docker.io/user/repo@sha256:<digest>
+  # Pull an OCI artifact using the digest and write the Kubernetes manifests to stdout
+  kustomizer pull oci://docker.io/user/repo@sha256:<digest>
 
   # Pull the latest artifact from a local registry
-  kustomizer pull localhost:5000/repo
+  kustomizer pull oci://localhost:5000/repo
 
   # Apply Kubernetes manifests from an OCI artifact 
-  kustomizer pull docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
+  kustomizer pull oci://docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
 `,
 	RunE: runPullCmd,
 }
@@ -57,85 +53,20 @@ func runPullCmd(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("you must specify an artifact name e.g. 'docker.io/user/repo:tag'")
 	}
-	url := args[0]
+
+	url, err := registry.ParseURL(args[0])
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	options := []crane.Option{}
-	options = append(options,
-		crane.WithContext(ctx),
-		crane.WithUserAgent("kustomizer/v1"),
-		crane.WithPlatform(&gcrv1.Platform{
-			Architecture: "none",
-			OS:           "none",
-		}),
-	)
-
-	img, err := crane.Pull(url, options...)
+	yml, err := registry.Pull(ctx, url)
 	if err != nil {
-		return err
-	}
-
-	manifest, err := img.Manifest()
-	if err != nil {
-		return err
-	}
-
-	if _, ok := manifest.Annotations["kustomizer.dev/version"]; !ok {
-		return fmt.Errorf("'kustomizer.dev/version' annotation not found in the image manifest")
-	}
-
-	checksum, ok := manifest.Annotations["kustomizer.dev/checksum"]
-	if !ok {
-		return fmt.Errorf("'kustomizer.dev/checksum' annotation not found in the OCI manifest")
-	}
-
-	layers, err := img.Layers()
-	if err != nil {
-		return err
-	}
-
-	if len(layers) < 1 {
-		return fmt.Errorf("no layers found in the %s image", url)
-	}
-
-	blob, err := layers[0].Uncompressed()
-	if err != nil {
-		return err
-	}
-
-	yml, err := untarYAML(blob)
-	if err != nil {
-		return err
-	}
-
-	if checksum != fmt.Sprintf("%x", sha256.Sum256([]byte(yml))) {
-		return fmt.Errorf("checksum mismatch")
+		return fmt.Errorf("pulling %s failed: %w", url, err)
 	}
 
 	rootCmd.Println(yml)
 	return nil
-}
-
-func untarYAML(r io.Reader) (string, error) {
-	sb := new(strings.Builder)
-	tr := tar.NewReader(r)
-	for {
-		header, err := tr.Next()
-		switch {
-		case err == io.EOF:
-			return sb.String(), nil
-		case err != nil:
-			return "", err
-		case header == nil:
-			continue
-		}
-
-		if header.Typeflag == tar.TypeReg {
-			if _, err := io.Copy(sb, tr); err != nil {
-				return "", err
-			}
-		}
-	}
 }

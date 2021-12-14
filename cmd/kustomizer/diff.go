@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/fluxcd/pkg/ssa"
@@ -90,6 +91,8 @@ func runDiffCmd(cmd *cobra.Command, args []string) error {
 		}
 		objects = objs
 	}
+
+	sort.Sort(ssa.SortableUnstructureds(objects))
 
 	newInventory := inventory.NewInventory(diffArgs.inventoryName, diffArgs.inventoryNamespace)
 	if err := newInventory.AddObjects(objects); err != nil {

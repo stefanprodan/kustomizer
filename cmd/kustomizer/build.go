@@ -19,8 +19,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"fmt"
-	"github.com/fluxcd/pkg/ssa"
 	"io/ioutil"
 	"os"
 	"path"
@@ -28,18 +29,36 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/kustomize/api/krusty"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 	"sigs.k8s.io/yaml"
+
+	"github.com/stefanprodan/kustomizer/pkg/registry"
 )
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build scans the given path for Kubernetes manifests or Kustomize overlays and prints the multi-doc to stdout.",
-	RunE:  runBuildCmd,
+	Short: "Build scans the given path for Kubernetes manifests or Kustomize overlays and produces a multi-doc YAML.",
+	Long: `The build command creates a multi-doc YAML from the given path.
+If --artifact is set to an OCI image URL, it packages the multi-doc YAML into an OCI artifact and
+pushes the artifact to the specified image repository using the credentials from '~/.docker/config.json'.`,
+	Example: `  # Scan recursively the given directory for Kubernetes manifests and print the resulting multi-doc YAML
+  kustomizer build -f ./deploy/manifests -o yaml
+
+  # Build a Kustomize overlay and and print the resulting multi-doc YAML
+  kustomizer build -f ./deploy/production -o yaml
+
+  # Build and push the resulting multi-doc YAML to a local registry
+  kustomizer build -f ./deploy/manifests --artifact oci://localhost:5000/repo:latest
+
+  # Build a Kustomize overlay and push the resulting multi-doc YAML to GitHub Container Registry
+  kustomizer build -k ./deploy/production -a oci://ghcr.io/user/repo:v1.0.0
+`,
+	RunE: runBuildCmd,
 }
 
 type buildFlags struct {
@@ -47,6 +66,7 @@ type buildFlags struct {
 	kustomize string
 	patch     []string
 	output    string
+	artifact  string
 }
 
 var buildArgs buildFlags
@@ -60,6 +80,9 @@ func init() {
 		"Path to a kustomization file that contains a list of patches.")
 	buildCmd.Flags().StringVarP(&buildArgs.output, "output", "o", "yaml",
 		"Write manifests to stdout in YAML or JSON format.")
+	buildCmd.Flags().StringVarP(&buildArgs.artifact, "artifact", "a", "",
+		"Artifact URL where to push the multi-doc YAML. "+
+			"The URL must be in the format 'oci://domain/org/repo:tag' e.g. 'oci://docker.io/stefanprodan/app-deploy:v1.0.0'.")
 
 	rootCmd.AddCommand(buildCmd)
 }
@@ -75,6 +98,38 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	sort.Sort(ssa.SortableUnstructureds(objects))
+
+	if buildArgs.artifact != "" {
+		url, err := registry.ParseURL(buildArgs.artifact)
+		if err != nil {
+			return err
+		}
+
+		logger.Println("building manifests...")
+		for _, object := range objects {
+			rootCmd.Println(ssa.FmtUnstructured(object))
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
+		defer cancel()
+
+		yml, err := ssa.ObjectsToYAML(objects)
+		if err != nil {
+			return err
+		}
+
+		logger.Println("pushing image", url)
+		digest, err := registry.Push(ctx, url, yml, &registry.Metadata{
+			Version:  VERSION,
+			Checksum: fmt.Sprintf("%x", sha256.Sum256([]byte(yml))),
+		})
+		if err != nil {
+			return fmt.Errorf("pushing image failed: %w", err)
+		}
+
+		logger.Println("published digest", digest)
+		return nil
+	}
 
 	switch buildArgs.output {
 	case "yaml":

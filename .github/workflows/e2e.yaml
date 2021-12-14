@@ -43,6 +43,14 @@ jobs:
           fi
       - name: Build
         run: make build
+      - name: Test OCI
+        run: |
+          ./bin/kustomizer build -k testdata/oci/demo-app -a oci://localhost:5000/demo-app:1.0.0
+          ./bin/kustomizer apply -i demo-app -a oci://localhost:5000/demo-app:1.0.0 --wait
+          kubectl -n kustomizer-demo-app delete svc/backend
+          ./bin/kustomizer pull oci://localhost:5000/demo-app:1.0.0 | \
+          ./bin/kustomizer diff -i demo-app -f- | grep created
+          ./bin/kustomizer delete -i demo-app --wait
       - name: Test apply --kustomize
         run: |
           ./bin/kustomizer apply -i kustomizer-test -k testdata/kustomize/ --wait --prune
@@ -55,11 +63,6 @@ jobs:
         run: |
           echo "token=kustomizer-test" > testdata/kustomize/secret.conf
           ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '*****"
-      - name: Test push/pull/apply
-        run: |
-          ./bin/kustomizer push -k testdata/kustomize/ localhost:5000/test:kustomize
-          ./bin/kustomizer pull localhost:5000/test:kustomize | grep tests.testing.kustomizer.dev
-          ./bin/kustomizer pull localhost:5000/test:kustomize | ./bin/kustomizer apply -i kustomizer-test -f-
       - name: Test apply --filename
         run: |
           ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
