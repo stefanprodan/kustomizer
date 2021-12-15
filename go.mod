@@ -3,7 +3,7 @@ module github.com/stefanprodan/kustomizer
 go 1.17
 
 require (
-	github.com/fluxcd/pkg/ssa v0.6.1
+	github.com/fluxcd/pkg/ssa v0.7.0
 	github.com/google/go-containerregistry v0.7.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/olekukonko/tablewriter v0.0.4
@@ -15,7 +15,7 @@ require (
 	k8s.io/cli-runtime v0.23.0
 	k8s.io/client-go v0.23.0
 	sigs.k8s.io/cli-utils v0.26.1
-	sigs.k8s.io/controller-runtime v0.11.0-beta.0.0.20211208093418-1f06556c918d
+	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/kustomize/api v0.10.1
 	sigs.k8s.io/kustomize/kyaml v0.13.0
 	sigs.k8s.io/yaml v1.3.0
