@@ -51,7 +51,7 @@ func init() {
 
 func runPullCmd(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("you must specify an artifact name e.g. 'docker.io/user/repo:tag'")
+		return fmt.Errorf("you must specify an artifact name e.g. 'oci://docker.io/user/repo:tag'")
 	}
 
 	url, err := registry.ParseURL(args[0])
@@ -62,7 +62,7 @@ func runPullCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	yml, err := registry.Pull(ctx, url)
+	yml, _, err := registry.Pull(ctx, url)
 	if err != nil {
 		return fmt.Errorf("pulling %s failed: %w", url, err)
 	}

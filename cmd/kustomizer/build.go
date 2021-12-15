@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
@@ -122,6 +123,7 @@ func runBuildCmd(cmd *cobra.Command, args []string) error {
 		digest, err := registry.Push(ctx, url, yml, &registry.Metadata{
 			Version:  VERSION,
 			Checksum: fmt.Sprintf("%x", sha256.Sum256([]byte(yml))),
+			Created:  time.Now().UTC().Format(time.RFC3339),
 		})
 		if err != nil {
 			return fmt.Errorf("pushing image failed: %w", err)

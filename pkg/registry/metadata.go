@@ -21,17 +21,20 @@ import "fmt"
 const (
 	VersionAnnotation  = "kustomizer.dev/version"
 	ChecksumAnnotation = "kustomizer.dev/checksum"
+	CreatedAnnotation  = "kustomizer.dev/created"
 )
 
 type Metadata struct {
 	Version  string `json:"version"`
 	Checksum string `json:"checksum"`
+	Created  string `json:"created"`
 }
 
 func (m *Metadata) ToAnnotations() map[string]string {
 	return map[string]string{
 		VersionAnnotation:  m.Version,
 		ChecksumAnnotation: m.Checksum,
+		CreatedAnnotation:  m.Created,
 	}
 }
 
@@ -46,8 +49,14 @@ func GetMetadata(annotations map[string]string) (*Metadata, error) {
 		return nil, fmt.Errorf("'%s' annotation not found", ChecksumAnnotation)
 	}
 
+	created, ok := annotations[CreatedAnnotation]
+	if !ok {
+		return nil, fmt.Errorf("'%s' annotation not found", CreatedAnnotation)
+	}
+
 	return &Metadata{
 		Version:  version,
 		Checksum: checksum,
+		Created:  created,
 	}, nil
 }

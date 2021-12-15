@@ -25,48 +25,48 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-func Pull(ctx context.Context, url string) (string, error) {
+func Pull(ctx context.Context, url string) (string, *Metadata, error) {
 	if _, err := name.ParseReference(url); err != nil {
-		return "", fmt.Errorf("parsing refernce failed: %w", err)
+		return "", nil, fmt.Errorf("parsing refernce failed: %w", err)
 	}
 
 	img, err := crane.Pull(url, craneOptions(ctx)...)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	manifest, err := img.Manifest()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	meta, err := GetMetadata(manifest.Annotations)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	layers, err := img.Layers()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if len(layers) < 1 {
-		return "", fmt.Errorf("no layers found in image")
+		return "", nil, fmt.Errorf("no layers found in image")
 	}
 
 	blob, err := layers[0].Uncompressed()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	content, err := untarContent(blob)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if meta.Checksum != fmt.Sprintf("%x", sha256.Sum256([]byte(content))) {
-		return "", fmt.Errorf("checksum mismatch")
+		return "", nil, fmt.Errorf("checksum mismatch")
 	}
 
-	return content, nil
+	return content, meta, nil
 }

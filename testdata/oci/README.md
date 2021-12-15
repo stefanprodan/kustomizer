@@ -74,6 +74,29 @@ The following checks were performed on each of these signatures:
 [{"critical":{"identity":{"docker-reference":"ghcr.io/stefanprodan/kustomizer-demo-app"},"image":{"docker-manifest-digest":"sha256:148c7452232a334e4843048ec41180c0c23644c30e87672bd961f31ee7ac2fca"},"type":"cosign container image signature"},"optional":null}]
 ```
 
+List the app manifests:
+
+```console
+$ kustomizer inspect oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION}
+Built by: kustomizer v1.3.0
+Created at: 2021-12-15T10:05:46Z
+Checksum: 5b8c45af6951e977581122b7848b490f25b43ffd44ed7a82fd574eff6aac06be
+Manifests:
+   Namespace/kustomizer-demo-app
+   ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
+   Service/kustomizer-demo-app/backend
+   Service/kustomizer-demo-app/cache
+   Service/kustomizer-demo-app/frontend
+   Deployment/kustomizer-demo-app/backend
+   - ghcr.io/stefanprodan/podinfo:6.0.0
+   Deployment/kustomizer-demo-app/cache
+   - public.ecr.aws/docker/library/redis:6.2.0
+   Deployment/kustomizer-demo-app/frontend
+   - ghcr.io/stefanprodan/podinfo:6.0.0
+   HorizontalPodAutoscaler/kustomizer-demo-app/backend
+   HorizontalPodAutoscaler/kustomizer-demo-app/frontend
+```
+
 Install app:
 
 ```console

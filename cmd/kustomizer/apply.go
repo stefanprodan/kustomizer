@@ -117,7 +117,7 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 			}
 
 			logger.Println("pulling", url)
-			yml, err := registry.Pull(ctx, url)
+			yml, _, err := registry.Pull(ctx, url)
 			if err != nil {
 				return fmt.Errorf("pulling %s failed: %w", ociURL, err)
 			}

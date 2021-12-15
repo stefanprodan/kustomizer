@@ -42,7 +42,7 @@ func init() {
 
 func runTagCmd(cmd *cobra.Command, args []string) error {
 	if len(args) != 2 {
-		return fmt.Errorf("you must specify an artifact name e.g. 'docker.io/user/repo:tag' and a tag")
+		return fmt.Errorf("you must specify an artifact name e.g. 'oci://docker.io/user/repo:tag' and a tag")
 	}
 
 	url, err := registry.ParseURL(args[0])
