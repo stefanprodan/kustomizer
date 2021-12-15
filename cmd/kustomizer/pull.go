@@ -26,7 +26,7 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:   "pull",
+	Use:   "pull OCIURL",
 	Short: "Pull downloads Kubernetes manifests from a container registry.",
 	Long: `The pull command downloads the specified OCI artifact and writes the Kubernetes manifests to stdout.
 For private registries, the pull command uses the credentials from '~/.docker/config.json'.`,

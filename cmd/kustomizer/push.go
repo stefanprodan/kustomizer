@@ -29,7 +29,7 @@ import (
 )
 
 var pushCmd = &cobra.Command{
-	Use:   "push",
+	Use:   "push OCIURL",
 	Short: "Push uploads Kubernetes manifests to a container registry.",
 	Long: `The push command scans the given path for Kubernetes manifests or Kustomize overlays,
 builds the manifests into a multi-doc YAML, packages the YAML file into an OCI artifact and
