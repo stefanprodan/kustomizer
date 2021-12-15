@@ -23,12 +23,13 @@ install-dev:
 install-plugin:
 	CGO_ENABLED=0 go build -o /usr/local/bin/kubectl-kustomizer ./cmd/kustomizer
 
+ENVTEST_ARCH ?= amd64
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 ENVTEST_KUBERNETES_VERSION=latest
 install-envtest: setup-envtest
-	$(SETUP_ENVTEST) use $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR)
+	$(SETUP_ENVTEST) use $(ENVTEST_KUBERNETES_VERSION) --arch=$(ENVTEST_ARCH) --bin-dir=$(ENVTEST_ASSETS_DIR)
 
-KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) use -i $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
+KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) --arch=$(ENVTEST_ARCH) use -i $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
 test: tidy fmt vet install-envtest
 	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -parallel 4 -coverprofile cover.out
 
@@ -46,14 +47,7 @@ endif
 
 setup-envtest:
 ifeq (, $(shell which setup-envtest))
-	@{ \
-	set -e ;\
-	SETUP_ENVTEST_TMP_DIR=$$(mktemp -d) ;\
-	cd $$SETUP_ENVTEST_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-runtime/tools/setup-envtest@latest ;\
-	rm -rf $$SETUP_ENVTEST_TMP_DIR ;\
-	}
+	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 SETUP_ENVTEST=$(GOBIN)/setup-envtest
 else
 SETUP_ENVTEST=$(shell which setup-envtest)
