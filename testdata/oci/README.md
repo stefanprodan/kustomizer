@@ -1,9 +1,27 @@
 # Kustomizer OCI Demo
 
+This an example of how to use Kustomizer, Sigstore consign and GitHub Container Registry
+to build a secure delivery pipeline for your apps.
+
+Publisher workflow:
+- tag app release
+- build and push the app image
+- update the app version the config manifests
+- build and push the app config image
+- sign both images (app and config) with cosign
+
+Consumer workflow:
+- verify the config image with cosign
+- inspect the config image and extract the app container image name
+- verify the app image with cosign
+- deploy the app on Kubernetes using the manifest from the config image
+
+## Prerequisites
+
 Export you GitHub username: 
 
 ```shell
-export GITHUB_USER="GITHUB-USER"
+export GITHUB_USER="YOUR-GITHUB-USERNAME"
 ```
 
 Login to ghcr.io ([docs](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)) with docker:
@@ -12,7 +30,14 @@ Login to ghcr.io ([docs](https://docs.github.com/en/packages/working-with-a-gith
 echo <GHCR-PUSH-TOKEN> | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
 ```
 
-Generate a key for image signing:
+If you don't have Docker installed, you can use [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane):
+
+```shell
+go install github.com/google/go-containerregistry/cmd/crane@latest
+echo <GHCR-PUSH-TOKEN> | crane auth login ghcr.io -u ${GITHUB_USER} --password-stdin
+```
+
+Install [cosign](https://docs.sigstore.dev/cosign/installation/) and generate a key for image signing:
 
 ```shell
 $ cosign generate-key-pair
@@ -22,6 +47,8 @@ Private key written to cosign.key
 Public key written to cosign.pub
 ```
 
+## Publish
+
 Clone the Kustomizer Git repository locally:
 
 ```shell
@@ -29,16 +56,16 @@ git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
-Export app version:
+Export the app config version:
 
 ```shell
-export DEPLOY_VERSION="1.0.0"
+export CONFIG_VERSION="1.0.0"
 ```
 
-Build and push image:
+Build and push the config image:
 
 ```console
-$ kustomizer build -k ./testdata/oci/demo-app/ -a oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION} 
+$ kustomizer build -k ./testdata/oci/demo-app/ -a oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} 
 building manifests...
 Namespace/kustomizer-demo-app
 ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
@@ -54,17 +81,25 @@ pushing image ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
 published digest ghcr.io/stefanprodan/kustomizer-demo-app@sha256:91d2bd8e0f1620e17e9d4c308ab87903644a952969d8ff52b601be0bffdca096
 ```
 
-Sign image using the private key:
+Sign the config image using your cosign private key:
 
 ```console
-$ cosign sign --key cosign.key ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION}
+$ cosign sign --key cosign.key ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
 Pushing signature to: ghcr.io/stefanprodan/kustomizer-demo-app
 ```
 
-Verify image using the public key:
+Tag the config image as latest:
+
+```shell
+kustomizer build tag oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} latest
+```
+
+## Verify and Inspect
+
+Verify the config image using your cosign public key:
 
 ```console
-$ cosign verify --key cosign.pub ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION}
+$ cosign verify --key cosign.pub ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
 Verification for ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0 --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
@@ -74,10 +109,10 @@ The following checks were performed on each of these signatures:
 [{"critical":{"identity":{"docker-reference":"ghcr.io/stefanprodan/kustomizer-demo-app"},"image":{"docker-manifest-digest":"sha256:148c7452232a334e4843048ec41180c0c23644c30e87672bd961f31ee7ac2fca"},"type":"cosign container image signature"},"optional":null}]
 ```
 
-List the app manifests:
+List the Kubernetes manifests from the config image:
 
 ```console
-$ kustomizer inspect oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION}
+$ kustomizer inspect oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
 Built by: kustomizer v1.3.0
 Created at: 2021-12-15T10:05:46Z
 Checksum: 5b8c45af6951e977581122b7848b490f25b43ffd44ed7a82fd574eff6aac06be
@@ -97,15 +132,25 @@ Manifests:
    HorizontalPodAutoscaler/kustomizer-demo-app/frontend
 ```
 
-Install app:
+To list only the container images referenced in the Kubernetes manifests:
+
+```console
+$ kustomizer inspect oci://ghcr.io/stefanprodan/kustomizer-demo-app:v1.0.0 --container-images
+ghcr.io/stefanprodan/podinfo:6.0.0
+public.ecr.aws/docker/library/redis:6.2.0
+```
+
+## Install
+
+Install the application using the config image:
 
 ```console
 $ kustomizer apply --wait --prune \
-  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION} \
+  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} \
   --inventory-name kustomizer-demo-app \
   --inventory-namespace default \
   --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
-  --revision ${DEPLOY_VERSION}
+  --revision ${CONFIG_VERSION}
 pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
 applying 10 manifest(s)...
 Namespace/kustomizer-demo-app created
@@ -122,28 +167,58 @@ waiting for resources to become ready...
 all resources are ready
 ```
 
-Bump deploy version:
+List inventories:
 
-```shell
-export DEPLOY_VERSION="1.0.1"
+```console
+$ kustomizer get inventories 
+NAME               	ENTRIES	SOURCE                                  	REVISION	LAST APPLIED         
+kustomizer-demo-app	10     	ghcr.io/stefanprodan/kustomizer-demo-app	v1.0.0  	2021-12-16T10:33:10Z
 ```
 
-Change the Redis image tag:
+## Publish updates
+
+Bump the config version:
+
+```shell
+export CONFIG_VERSION="1.0.1"
+```
+
+Change the Redis container image tag:
 
 ```shell
 yq eval '.images[1].newTag="6.2.1"' --inplace ./testdata/oci/demo-app/kustomization.yaml
 ```
 
-Push a new image:
+Push a new config image:
 
 ```shell
-kustomizer push -a oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION}  -k ./testdata/oci/demo-app/ 
+kustomizer push -a oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}  -k ./testdata/oci/demo-app/ 
 ```
 
-Diff changes:
+Sign the new version:
+
+```shell
+cosign sign --key cosign.key ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
+```
+
+Tag the config image as latest:
+
+```shell
+kustomizer build tag oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} latest
+```
+
+## Upgrade
+
+Verify the latest version:
+
+```shell
+cosign verify --key cosign.pub ghcr.io/${GITHUB_USER}/kustomizer-demo-app:latest
+```
+
+Pull the latest config image and diff changes:
 
 ```console
-$ kustomizer pull oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION} | kustomizer diff -i kustomizer-demo-app --prune -f-
+$ kustomizer pull oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app | kustomizer diff -i kustomizer-demo-app --prune -f-
 ► Deployment/kustomizer-demo-app/cache drifted
 @@ -5,7 +5,7 @@
      deployment.kubernetes.io/revision: "1"
@@ -165,16 +240,16 @@ $ kustomizer pull oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERS
            failureThreshold: 3
 ```
 
-Update app:
+Update the app on your cluster:
 
 ```console
 $ kustomizer apply --wait --prune \
-  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${DEPLOY_VERSION} \
+  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:latest \
   --inventory-name kustomizer-demo-app \
   --inventory-namespace default \
   --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
-  --revision ${DEPLOY_VERSION}
-pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.1
+  --revision ${CONFIG_VERSION}
+pulling ghcr.io/stefanprodan/kustomizer-demo-app:latest
 applying 10 manifest(s)...
 Namespace/kustomizer-demo-app unchanged
 ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k unchanged
@@ -188,4 +263,55 @@ HorizontalPodAutoscaler/kustomizer-demo-app/backend unchanged
 HorizontalPodAutoscaler/kustomizer-demo-app/frontend unchanged
 waiting for resources to become ready...
 all resources are ready
+```
+
+## Patch upstream configs
+
+Patch the app config using a Kustomize strategic merge patch and apply the changes:
+
+```console
+$ kustomizer apply --wait --prune \
+  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} \
+  --inventory-name kustomizer-demo-app \
+  --inventory-namespace default \
+  --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
+  --revision ${CONFIG_VERSION} \
+  --patch ./testdata/patches/safe-to-evict.yaml
+pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.1
+applying 10 manifest(s)...
+Namespace/kustomizer-demo-app unchanged
+ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k unchanged
+Service/kustomizer-demo-app/backend unchanged
+Service/kustomizer-demo-app/cache unchanged
+Service/kustomizer-demo-app/frontend unchanged
+Deployment/kustomizer-demo-app/backend configured
+Deployment/kustomizer-demo-app/cache configured
+Deployment/kustomizer-demo-app/frontend configured
+HorizontalPodAutoscaler/kustomizer-demo-app/backend unchanged
+HorizontalPodAutoscaler/kustomizer-demo-app/frontend unchanged
+waiting for resources to become ready...
+all resources are ready
+```
+
+## Uninstall
+
+Delete the app from your cluster:
+
+```console
+$ kustomizer delete -i kustomizer-demo-app
+retrieving inventory...
+deleting 10 manifest(s)...
+HorizontalPodAutoscaler/kustomizer-demo-app/frontend deleted
+HorizontalPodAutoscaler/kustomizer-demo-app/backend deleted
+Deployment/kustomizer-demo-app/frontend deleted
+Deployment/kustomizer-demo-app/cache deleted
+Deployment/kustomizer-demo-app/backend deleted
+Service/kustomizer-demo-app/frontend deleted
+Service/kustomizer-demo-app/cache deleted
+Service/kustomizer-demo-app/backend deleted
+ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k deleted
+Namespace/kustomizer-demo-app deleted
+ConfigMap/default/kustomizer-demo-app deleted
+waiting for resources to be terminated...
+all resources have been deleted
 ```
