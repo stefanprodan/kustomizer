@@ -1,0 +1,39 @@
+site_name: kustomizer
+site_description: |
+  Build, diff, apply, prune command-line utility for Kubernetes manifests and Kustomize overlays.
+  Powered by Kubernetes server-side apply.
+site_author: Stefan Prodan
+site_url: https://kustomizer.dev
+
+repo_name: stefanprodan/kustomizer
+repo_url: https://github.com/stefanprodan/kustomizer
+edit_uri: ""
+
+theme:
+  name: material
+  #logo: _assets/logo.png
+  language: en
+  palette:
+    primary: deep purple
+    accent: indigo
+
+docs_dir: docs
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - meta
+  - codehilite
+  - pymdownx.tabbed
+  - pymdownx.tilde
+  - pymdownx.progressbar
+  - pymdownx.tasklist
+  - pymdownx.superfences
+
+nav:
+  - Introduction: index.md
+  - Install: install.md
+  - Get Started: get-started.md
+  - GitHub Action: github-action.md
