@@ -21,11 +21,15 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/distribution/distribution/v3/configuration"
+	"github.com/distribution/distribution/v3/registry"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/mattn/go-shellwords"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,9 +44,16 @@ func init() {
 var (
 	tmpDir        string
 	envTestClient client.WithWatch
+	registryHost  string
 )
 
 func TestMain(m *testing.M) {
+	regURL, err := startTestRegistry()
+	if err != nil {
+		panic(err)
+	}
+	registryHost = regURL
+
 	testEnv := &envtest.Environment{}
 
 	cfg, err := testEnv.Start()
@@ -88,6 +99,43 @@ func TestMain(m *testing.M) {
 	testEnv.Stop()
 
 	os.Exit(code)
+}
+
+func startTestRegistry() (string, error) {
+	port, err := getFreePort()
+	if err != nil {
+		return "", err
+	}
+
+	registryHost = fmt.Sprintf("localhost:%d", port)
+	config := &configuration.Configuration{}
+	config.Log.Level = configuration.Loglevel("error")
+	config.Log.AccessLog.Disabled = true
+	config.HTTP.Addr = fmt.Sprintf(":%d", port)
+	config.HTTP.DrainTimeout = time.Duration(10) * time.Second
+	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	dockerRegistry, err := registry.NewRegistry(context.Background(), config)
+	if err != nil {
+		return "", err
+	}
+
+	go dockerRegistry.ListenAndServe()
+
+	return registryHost, nil
+}
+
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
 type TestFile struct {
