@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPull(t *testing.T) {
+func TestInspect(t *testing.T) {
 	g := NewWithT(t)
 	id := randStringRunes(5)
 	tag := "v1.0.0"
@@ -37,7 +37,7 @@ func TestPull(t *testing.T) {
 
 	t.Run("build and push artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"build -a %s -k %s",
+			"push artifact %s -k %s",
 			artifact,
 			dir,
 		))
@@ -47,14 +47,25 @@ func TestPull(t *testing.T) {
 		g.Expect(output).To(MatchRegexp(id))
 	})
 
-	t.Run("pull artifact", func(t *testing.T) {
+	t.Run("inspect artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"pull %s",
+			"inspect artifact %s",
 			artifact,
 		))
 
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
 		g.Expect(output).To(MatchRegexp(id))
+	})
+
+	t.Run("inspect artifact images", func(t *testing.T) {
+		output, err := executeCommand(fmt.Sprintf(
+			"inspect artifact %s --container-images",
+			artifact,
+		))
+
+		g.Expect(err).NotTo(HaveOccurred())
+		t.Logf("\n%s", output)
+		g.Expect(output).To(BeEmpty())
 	})
 }

@@ -46,11 +46,11 @@ jobs:
       - name: Test OCI
         run: |
           ./bin/kustomizer build -k testdata/oci/demo-app -a oci://localhost:5000/demo-app:1.0.0
-          ./bin/kustomizer tag oci://localhost:5000/demo-app:1.0.0 latest
-          ./bin/kustomizer inspect oci://localhost:5000/demo-app | grep public.ecr.aws
+          ./bin/kustomizer tag artifact oci://localhost:5000/demo-app:1.0.0 latest
+          ./bin/kustomizer inspect artifact oci://localhost:5000/demo-app | grep public.ecr.aws
           ./bin/kustomizer apply -i demo-app -a oci://localhost:5000/demo-app:1.0.0 --wait
           kubectl -n kustomizer-demo-app delete svc/backend
-          ./bin/kustomizer pull oci://localhost:5000/demo-app:1.0.0 | \
+          ./bin/kustomizer pull artifact oci://localhost:5000/demo-app:1.0.0 | \
           ./bin/kustomizer diff -i demo-app -f- | grep created
           ./bin/kustomizer delete -i demo-app --wait
       - name: Test apply --kustomize

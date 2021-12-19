@@ -50,7 +50,7 @@ func TestTag(t *testing.T) {
 	t.Run("tag artifact", func(t *testing.T) {
 		tag = "v2.0.0"
 		output, err := executeCommand(fmt.Sprintf(
-			"tag %s %s",
+			"tag artifact %s %s",
 			artifact,
 			tag,
 		))
@@ -63,7 +63,7 @@ func TestTag(t *testing.T) {
 	t.Run("pull artifact", func(t *testing.T) {
 		artifact = fmt.Sprintf("oci://%s/%s:%s", registryHost, id, tag)
 		output, err := executeCommand(fmt.Sprintf(
-			"pull %s",
+			"pull artifact %s",
 			artifact,
 		))
 

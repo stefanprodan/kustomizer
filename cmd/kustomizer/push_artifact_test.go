@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestInspect(t *testing.T) {
+func TestPush(t *testing.T) {
 	g := NewWithT(t)
 	id := randStringRunes(5)
 	tag := "v1.0.0"
@@ -37,20 +37,9 @@ func TestInspect(t *testing.T) {
 
 	t.Run("build and push artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"build -a %s -k %s",
+			"push artifact %s -k %s",
 			artifact,
 			dir,
-		))
-
-		g.Expect(err).NotTo(HaveOccurred())
-		t.Logf("\n%s", output)
-		g.Expect(output).To(MatchRegexp(id))
-	})
-
-	t.Run("inspect artifact", func(t *testing.T) {
-		output, err := executeCommand(fmt.Sprintf(
-			"inspect %s",
-			artifact,
 		))
 
 		g.Expect(err).NotTo(HaveOccurred())

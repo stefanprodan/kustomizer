@@ -17,56 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/spf13/cobra"
-
-	"github.com/stefanprodan/kustomizer/pkg/registry"
 )
 
 var pullCmd = &cobra.Command{
-	Use:   "pull OCIURL",
-	Short: "Pull downloads Kubernetes manifests from a container registry.",
-	Long: `The pull command downloads the specified OCI artifact and writes the Kubernetes manifests to stdout.
-For private registries, the pull command uses the credentials from '~/.docker/config.json'.`,
-	Example: `  # Pull Kubernetes manifests from an OCI artifact hosted on Docker Hub
-  kustomizer pull oci://docker.io/user/repo:v1.0.0 > manifests.yaml
-
-  # Pull an OCI artifact using the digest and write the Kubernetes manifests to stdout
-  kustomizer pull oci://docker.io/user/repo@sha256:<digest>
-
-  # Pull the latest artifact from a local registry
-  kustomizer pull oci://localhost:5000/repo
-
-  # Apply Kubernetes manifests from an OCI artifact 
-  kustomizer pull oci://docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
-`,
-	RunE: runPullCmd,
+	Use:   "pull",
+	Short: "Pull artifacts from container registries.",
 }
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
-}
-
-func runPullCmd(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("you must specify an artifact name e.g. 'oci://docker.io/user/repo:tag'")
-	}
-
-	url, err := registry.ParseURL(args[0])
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
-	defer cancel()
-
-	yml, _, err := registry.Pull(ctx, url)
-	if err != nil {
-		return fmt.Errorf("pulling %s failed: %w", url, err)
-	}
-
-	rootCmd.Println(yml)
-	return nil
 }
