@@ -19,7 +19,7 @@ set -e
 DEFAULT_BIN_DIR="/usr/local/bin"
 BIN_DIR=${1:-"${DEFAULT_BIN_DIR}"}
 GITHUB_REPO="stefanprodan/kustomizer"
-COSIGN_PUB_KEY="https://kustomizer.dev/verify/cosign.pub"
+COSIGN_PUB_KEY="https://stefanprodan.keybase.pub/cosign/kustomizer.pub"
 
 # Helper functions for logs
 info() {

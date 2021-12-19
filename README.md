@@ -1,6 +1,5 @@
 # kustomizer
 
-[![godev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)](https://pkg.go.dev/github.com/stefanprodan/kustomizer)
 [![e2e](https://github.com/stefanprodan/kustomizer/workflows/e2e/badge.svg)](https://github.com/stefanprodan/kustomizer/actions)
 [![license](https://img.shields.io/github/license/stefanprodan/kustomizer.svg)](https://github.com/stefanprodan/kustomizer/blob/main/LICENSE)
 [![release](https://img.shields.io/github/release/stefanprodan/kustomizer/all.svg)](https://github.com/stefanprodan/kustomizer/releases)
@@ -17,7 +16,7 @@ Compared to `kubectl apply`, Kustomizer does things a little different:
 - Deletes stale objects like ConfigMaps and Secrets generated with Kustomize or other tools.
 
 Kustomizer relies on [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
-and requires a Kubernetes cluster **v1.18** or newer.
+and requires a Kubernetes cluster **v1.20** or newer.
 
 ## Install
 
@@ -31,7 +30,7 @@ curl -s https://kustomizer.dev/install.sh | sudo bash
 ```
 
 If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
-of the release using the public key from [kustomizer.dev/verify/cosign.pub](https://kustomizer.dev/verify/cosign.pub).
+of the release using the public key from [stefanprodan.keybase.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
 
 Or from source with Go:
 

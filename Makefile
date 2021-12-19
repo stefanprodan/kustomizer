@@ -14,6 +14,7 @@ vet:
 build:
 	CGO_ENABLED=0 go build -o ./bin/kustomizer ./cmd/kustomizer
 
+.PHONY: install
 install:
 	go install ./cmd/kustomizer
 

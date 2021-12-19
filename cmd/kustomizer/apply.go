@@ -17,15 +17,20 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sort"
-
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/pkg/registry"
 )
 
 var applyCmd = &cobra.Command{
@@ -45,6 +50,7 @@ type applyFlags struct {
 	prune              bool
 	source             string
 	revision           string
+	artifact           []string
 }
 
 var applyArgs applyFlags
@@ -54,6 +60,8 @@ func init() {
 		"Path to Kubernetes manifest(s). If a directory is specified, then all manifests in the directory tree will be processed recursively.")
 	applyCmd.Flags().StringVarP(&applyArgs.kustomize, "kustomize", "k", "",
 		"Path to a directory that contains a kustomization.yaml.")
+	applyCmd.Flags().StringSliceVarP(&applyArgs.artifact, "artifact", "a", nil,
+		"Image URL in the format 'oci://domain/org/repo:tag' e.g. 'oci://docker.io/stefanprodan/app-deploy:v1.0.0'.")
 	applyCmd.Flags().StringSliceVarP(&applyArgs.patch, "patch", "p", nil,
 		"Path to a kustomization file that contains a list of patches.")
 	applyCmd.Flags().BoolVar(&applyArgs.wait, "wait", false, "Wait for the applied Kubernetes objects to become ready.")
@@ -69,8 +77,8 @@ func init() {
 }
 
 func runApplyCmd(cmd *cobra.Command, args []string) error {
-	if applyArgs.kustomize == "" && len(applyArgs.filename) == 0 {
-		return fmt.Errorf("-f or -k is required")
+	if applyArgs.kustomize == "" && len(applyArgs.filename) == 0 && len(applyArgs.artifact) == 0 {
+		return fmt.Errorf("-f, -k or -a is required")
 	}
 	if applyArgs.inventoryName == "" {
 		return fmt.Errorf("--inventory-name is required")
@@ -79,10 +87,57 @@ func runApplyCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--inventory-namespace is required")
 	}
 
-	logger.Println("building inventory...")
-	objects, err := buildManifests(applyArgs.kustomize, applyArgs.filename, applyArgs.patch)
-	if err != nil {
-		return err
+	var objects []*unstructured.Unstructured
+
+	switch {
+	case len(applyArgs.filename) == 1 && applyArgs.filename[0] == "-":
+		data, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
+		objs, err := ssa.ReadObjects(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		objects = objs
+	case len(applyArgs.artifact) > 0:
+		tmpDir, err := os.MkdirTemp("", "oci")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmpDir)
+
+		ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
+		defer cancel()
+		for i, ociURL := range applyArgs.artifact {
+			url, err := registry.ParseURL(ociURL)
+			if err != nil {
+				return err
+			}
+
+			logger.Println("pulling", url)
+			yml, _, err := registry.Pull(ctx, url)
+			if err != nil {
+				return fmt.Errorf("pulling %s failed: %w", ociURL, err)
+			}
+
+			if err := os.WriteFile(filepath.Join(tmpDir, fmt.Sprintf("%v.yaml", i)), []byte(yml), 0666); err != nil {
+				return fmt.Errorf("extracting manifests from' %s' failed: %w", ociURL, err)
+			}
+		}
+		objs, err := buildManifests("", []string{tmpDir}, applyArgs.patch)
+		if err != nil {
+			return err
+		}
+		objects = objs
+	default:
+		logger.Println("building inventory...")
+		objs, err := buildManifests(applyArgs.kustomize, applyArgs.filename, applyArgs.patch)
+		if err != nil {
+			return err
+		}
+		objects = objs
 	}
 
 	newInventory := inventory.NewInventory(applyArgs.inventoryName, applyArgs.inventoryNamespace)
