@@ -1,4 +1,52 @@
-# Kustomizer OCI Demo
+## Using container registries to distribute Kubernetes manifests
+
+Kustomizer can package Kubernetes manifests in an OCI image and store them in a container registry,
+right next to your applications' images.
+
+Similar to Docker, Kustomizer offers commands to manage OCI artifacts:
+
+* `kustomizer push oci://<image-url>:<tag>` Push uploads Kubernetes manifests to a container registry.
+* `kustomizer tag oci://<image-url>:<tag> <new-tag>` Tag adds a tag for the specified OCI artifact.
+* `kustomizer pull oci://<image-url>:<tag>` Pull downloads Kubernetes manifests from a container registry.
+* `kustomizer inspect oci://<image-url>:<tag>` Inspect downloads the specified OCI artifact and prints a report of its content.
+
+Kustomizer uses [go-containerregistry](https://github.com/google/go-containerregistry)
+for interacting with container registries, and it's compatible with
+Docker Hub, GHCR, ACR, ECR, GCR, Artifactory, self-hosted Docker Registry and others.
+For auth, Kustomizer uses the credentials from `~/.docker/config.json`.
+
+Assuming you've automated your application's build & push workflow using Docker,
+you can extend the automation to do the same for your Kubernetes manifests that describe how your
+application gets deployed.
+
+Build a Kustomize overlay and push the multi-doc YAML to Docker Hub:
+
+```shell
+kustomizer build -k ./overlays/dist --artifact oci://docker.io/org/app-config:v1.0.0
+kustomizer tag oci://docker.io/org/app-config:v1.0.0 latest
+```
+
+If you're using cue, cdk8s, jsonnet, helm or any other tool that generates Kubernetes manifests,
+you can pass the multi-doc YAML to Kustomizer with:
+
+```shell
+cue cmd ymldump ./deploy/app > app-config.yaml
+kustomizer push oci://docker.io/org/app-config:v1.0.0 -f app-config.yaml
+```
+
+Pull the app config image and diff changes with Kubernetes server-side apply dry-run:
+
+```shell
+kustomizer pull oci://docker.io/org/app-config:v1.0.0 | kustomizer diff -i app -f-
+```
+
+Apply the latest app config on your cluster:
+
+```shell
+kustomizer apply -i app -a oci://docker.io/org/app-config:latest
+```
+
+## OCI Demo
 
 This an example of how to use Kustomizer, Sigstore consign and GitHub Container Registry
 to build a secure delivery pipeline for your apps.

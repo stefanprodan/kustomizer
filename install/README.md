@@ -9,7 +9,7 @@ curl -s https://raw.githubusercontent.com/stefanprodan/kustomizer/main/install/k
 The install script does the following:
 * attempts to detect your OS
 * downloads the [release tar file](https://github.com/stefanprodan/kustomizer/releases) and its signature in a temporary directory
-* verifies the [cosign](https://github.com/sigstore/cosign) signature with [kustomizer.dev/verify/cosign.pub](https://kustomizer.dev/verify/cosign.pub)
+* verifies the [cosign](https://github.com/sigstore/cosign) signature with [stefanprodan.keybase.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub)
 * unpacks the release tar file
 * verifies the binary checksum
 * copies the kustomizer binary to `/usr/local/bin`
