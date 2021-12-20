@@ -26,19 +26,25 @@ import (
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
 )
 
-var getInventoryCmd = &cobra.Command{
-	Use:   "inventory [name]",
-	Short: "Get inventory prints the content of the given inventory.",
-	RunE:  runGetInventoryCmd,
+var inspectInventoryCmd = &cobra.Command{
+	Use:     "inventory",
+	Aliases: []string{"inv"},
+	Short:   "Inspect prints the content of the given inventory.",
+	Example: ` kustomizer inspect inventory <name> -n <namespace>
+
+  # Get an inventory and list its content
+  kustomizer inspect inv my-app -n apps
+`,
+	RunE: runInspectInventoryCmd,
 }
 
 func init() {
-	getCmd.AddCommand(getInventoryCmd)
+	inspectCmd.AddCommand(inspectInventoryCmd)
 }
 
-func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
+func runInspectInventoryCmd(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("you must specify an intentory name")
+		return fmt.Errorf("you must specify an inventory name")
 	}
 	name := args[0]
 
@@ -56,7 +62,7 @@ func runGetInventoryCmd(cmd *cobra.Command, args []string) error {
 
 	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 
-	invStorage := &inventory.InventoryStorage{
+	invStorage := &inventory.Storage{
 		Manager: resMgr,
 		Owner:   inventoryOwner,
 	}

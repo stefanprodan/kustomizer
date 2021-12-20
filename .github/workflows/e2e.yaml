@@ -45,54 +45,53 @@ jobs:
         run: make build
       - name: Test OCI
         run: |
-          ./bin/kustomizer build -k testdata/oci/demo-app -a oci://localhost:5000/demo-app:1.0.0
+          ./bin/kustomizer push artifact oci://localhost:5000/demo-app:1.0.0 -k testdata/oci/demo-app 
           ./bin/kustomizer tag artifact oci://localhost:5000/demo-app:1.0.0 latest
           ./bin/kustomizer inspect artifact oci://localhost:5000/demo-app | grep public.ecr.aws
-          ./bin/kustomizer apply -i demo-app -a oci://localhost:5000/demo-app:1.0.0 --wait
+          ./bin/kustomizer apply inv demo-app -a oci://localhost:5000/demo-app:1.0.0 --wait
           kubectl -n kustomizer-demo-app delete svc/backend
-          ./bin/kustomizer pull artifact oci://localhost:5000/demo-app:1.0.0 | \
-          ./bin/kustomizer diff -i demo-app -f- | grep created
-          ./bin/kustomizer delete -i demo-app --wait
+          ./bin/kustomizer diff inv demo-app -a oci://localhost:5000/demo-app:1.0.0 | grep created
+          ./bin/kustomizer delete inv demo-app --wait
       - name: Test apply --kustomize
         run: |
-          ./bin/kustomizer apply -i kustomizer-test -k testdata/kustomize/ --wait --prune
+          ./bin/kustomizer apply inv kustomizer-test -k testdata/kustomize/ --wait --prune
           kubectl -n kustomizer-test get tests 2>&1 | grep custom-resource-test1
       - name: Test diff --kustomize
         run: |
           echo "test=kustomizer-test" > testdata/kustomize/test.conf
-          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ --prune 2>&1 | grep drifted
+          ./bin/kustomizer diff inv kustomizer-test -k testdata/kustomize/ --prune 2>&1 | grep drifted
       - name: Test diff secret marks
         run: |
           echo "token=kustomizer-test" > testdata/kustomize/secret.conf
-          ./bin/kustomizer diff -i kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '*****"
+          ./bin/kustomizer diff inv kustomizer-test -k testdata/kustomize/ 2>&1 | grep -F "secret.conf: '*****"
       - name: Test apply --filename
         run: |
-          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
+          ./bin/kustomizer apply inv kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-test get svc frontend 2>&1 | grep frontend
       - name: Test apply --prune
         run: |
           rm -rf testdata/plain/frontend
-          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ --wait --prune
+          ./bin/kustomizer apply inv kustomizer-demo -f testdata/plain/ --wait --prune
           kubectl -n kustomizer-demo get svc frontend 2>&1 | grep NotFound
       - name: Test apply --patch
         run: |
-          ./bin/kustomizer apply -i kustomizer-demo -f testdata/plain/ -p testdata/patches/safe-to-evict.yaml --wait --prune
+          ./bin/kustomizer apply inv kustomizer-demo -f testdata/plain/ -p testdata/patches/safe-to-evict.yaml --wait --prune
           kubectl -n kustomizer-demo get deployment backend -oyaml | grep safe-to-evict
       - name: Test delete --wait
         run: |
-          ./bin/kustomizer delete -i kustomizer-demo --wait
+          ./bin/kustomizer delete inv kustomizer-demo --wait
           kubectl get ns kustomizer-demo 2>&1 | grep NotFound
-          ./bin/kustomizer delete -i kustomizer-test --wait
+          ./bin/kustomizer delete inv kustomizer-test --wait
           kubectl get crd tests.testing.kustomizer.dev 2>&1 | grep NotFound
       - name: Load test apply (110 objects)
         run: |
-          ./bin/kustomizer apply -i load-test -k ./testdata/loadtest/
+          ./bin/kustomizer apply inv load-test -n kube-system -k ./testdata/loadtest/
       - name: Load test delete (110 objects)
         run: |
-          ./bin/kustomizer delete -i load-test
+          ./bin/kustomizer delete inv load-test -n kube-system
       - name: Test staged apply
         run: |
-          ./bin/kustomizer apply -i cert-test -k ./testdata/certs/ --prune --wait
+          ./bin/kustomizer apply inv cert-test -k ./testdata/certs/ --prune --wait
           kubectl -n kustomizer-cert-test wait issuers/my-ca-issuer --for=condition=ready --timeout=1m
       - name: Debug failure
         if: failure()

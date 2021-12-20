@@ -30,16 +30,60 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const inventoryKindName = "inventory"
+const (
+	InventoryKindName = "inventory"
+	InventoryPrefix   = "inv-"
+	nameLabelKey      = "app.kubernetes.io/name"
+	componentLabelKey = "app.kubernetes.io/component"
+	createdByLabelKey = "app.kubernetes.io/created-by"
+)
 
-// InventoryStorage manages the Inventory ConfigMap storage.
-type InventoryStorage struct {
+// Storage manages the Inventory in-cluster storage.
+type Storage struct {
 	Manager *ssa.ResourceManager
 	Owner   ssa.Owner
 }
 
-// ApplyInventory creates or updates the ConfigMap object for the given inventory.
-func (m *InventoryStorage) ApplyInventory(ctx context.Context, i *Inventory) error {
+// GetOwnerLabels returns the inventory storage common labels.
+func (m *Storage) GetOwnerLabels() client.MatchingLabels {
+	return client.MatchingLabels{
+		componentLabelKey: InventoryKindName,
+		createdByLabelKey: m.Owner.Field,
+	}
+}
+
+// CreateNamespace creates the inventory namespace if not present.
+func (m *Storage) CreateNamespace(ctx context.Context, name string) error {
+	ns := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				createdByLabelKey: m.Owner.Field,
+			},
+		},
+	}
+
+	if err := m.Manager.Client().Get(ctx, client.ObjectKeyFromObject(ns), ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			opts := []client.PatchOption{
+				client.ForceOwnership,
+				client.FieldOwner(m.Owner.Field),
+			}
+			return m.Manager.Client().Patch(ctx, ns, client.Apply, opts...)
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ApplyInventory creates or updates the storage object for the given inventory.
+func (m *Storage) ApplyInventory(ctx context.Context, i *Inventory) error {
 	data, err := json.Marshal(i.Entries)
 	if err != nil {
 		return err
@@ -57,7 +101,7 @@ func (m *InventoryStorage) ApplyInventory(ctx context.Context, i *Inventory) err
 	}
 
 	cm.Data = map[string]string{
-		inventoryKindName: string(data),
+		InventoryKindName: string(data),
 	}
 
 	opts := []client.PatchOption{
@@ -67,8 +111,8 @@ func (m *InventoryStorage) ApplyInventory(ctx context.Context, i *Inventory) err
 	return m.Manager.Client().Patch(ctx, cm, client.Apply, opts...)
 }
 
-// GetInventory retrieves the entries from the ConfigMap for the given inventory name and namespace.
-func (m *InventoryStorage) GetInventory(ctx context.Context, i *Inventory) error {
+// GetInventory retrieves the entries from the storage for the given inventory name and namespace.
+func (m *Storage) GetInventory(ctx context.Context, i *Inventory) error {
 	cm := m.newConfigMap(i.Name, i.Namespace)
 
 	cmKey := client.ObjectKeyFromObject(cm)
@@ -77,12 +121,12 @@ func (m *InventoryStorage) GetInventory(ctx context.Context, i *Inventory) error
 		return err
 	}
 
-	if _, ok := cm.Data[inventoryKindName]; !ok {
+	if _, ok := cm.Data[InventoryKindName]; !ok {
 		return fmt.Errorf("inventory data not found in ConfigMap/%s", cmKey)
 	}
 
 	var entries []Entry
-	err = json.Unmarshal([]byte(cm.Data[inventoryKindName]), &entries)
+	err = json.Unmarshal([]byte(cm.Data[InventoryKindName]), &entries)
 	if err != nil {
 		return err
 	}
@@ -101,8 +145,8 @@ func (m *InventoryStorage) GetInventory(ctx context.Context, i *Inventory) error
 	return nil
 }
 
-// DeleteInventory removes the ConfigMap for the given inventory name and namespace.
-func (m *InventoryStorage) DeleteInventory(ctx context.Context, i *Inventory) error {
+// DeleteInventory removes the storage for the given inventory name and namespace.
+func (m *Storage) DeleteInventory(ctx context.Context, i *Inventory) error {
 	cm := m.newConfigMap(i.Name, i.Namespace)
 
 	cmKey := client.ObjectKeyFromObject(cm)
@@ -114,7 +158,7 @@ func (m *InventoryStorage) DeleteInventory(ctx context.Context, i *Inventory) er
 }
 
 // GetInventoryStaleObjects returns the list of objects metadata subject to pruning.
-func (m *InventoryStorage) GetInventoryStaleObjects(ctx context.Context, i *Inventory) ([]*unstructured.Unstructured, error) {
+func (m *Storage) GetInventoryStaleObjects(ctx context.Context, i *Inventory) ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 	existingInventory := NewInventory(i.Name, i.Namespace)
 	if err := m.GetInventory(ctx, existingInventory); err != nil {
@@ -132,19 +176,19 @@ func (m *InventoryStorage) GetInventoryStaleObjects(ctx context.Context, i *Inve
 	return objects, nil
 }
 
-func (m *InventoryStorage) newConfigMap(name, namespace string) *corev1.ConfigMap {
+func (m *Storage) newConfigMap(name, namespace string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      InventoryPrefix + name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       name,
-				"app.kubernetes.io/component":  inventoryKindName,
-				"app.kubernetes.io/created-by": m.Owner.Field,
+				nameLabelKey:      name,
+				componentLabelKey: InventoryKindName,
+				createdByLabelKey: m.Owner.Field,
 			},
 		},
 	}

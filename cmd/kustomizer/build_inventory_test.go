@@ -23,27 +23,41 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGetInventory(t *testing.T) {
+func TestBuild(t *testing.T) {
 	g := NewWithT(t)
-	id := "get-" + randStringRunes(5)
-	inventory := fmt.Sprintf("inv-%s", id)
-	source := "https://github.com/stefanprodan/kustomizer.git"
-	revision := "e44c210"
-
-	err := createNamespace(id)
-	g.Expect(err).NotTo(HaveOccurred())
+	id := randStringRunes(5)
 
 	dir, err := makeTestDir(id, testManifests(id, id, false))
 	g.Expect(err).NotTo(HaveOccurred())
 
-	t.Run("creates objects", func(t *testing.T) {
+	patchDir, err := makeTestDir(
+		"patch"+id,
+		[]TestFile{
+			{
+				Name: "patch.yaml",
+				Body: `---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+patches:
+  - target:
+      kind: ConfigMap
+    patch: |
+      - op: add
+        path: /data/patch
+        value:
+          test
+`,
+			},
+		},
+	)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	t.Run("builds objects", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"apply -i %s -k %s --inventory-namespace %s --source %s --revision %s",
-			inventory,
+			"build inv %s -f %s -n %s -o yaml",
+			id,
 			dir,
 			id,
-			source,
-			revision,
 		))
 
 		g.Expect(err).NotTo(HaveOccurred())
@@ -51,19 +65,17 @@ func TestGetInventory(t *testing.T) {
 		g.Expect(output).To(MatchRegexp(id))
 	})
 
-	t.Run("lists inventory", func(t *testing.T) {
+	t.Run("patch objects", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"get inventory %s --namespace %s",
-			inventory,
+			"build inv %s -f %s -n %s -p %s -o yaml",
 			id,
+			dir,
+			id,
+			patchDir+"/patch.yaml",
 		))
 
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
-		g.Expect(output).To(MatchRegexp(fmt.Sprintf("%s/%s", id, inventory)))
-		g.Expect(output).To(MatchRegexp(source))
-		g.Expect(output).To(MatchRegexp(revision))
-		g.Expect(output).To(MatchRegexp(fmt.Sprintf("ConfigMap/%s/%s", id, id)))
-		g.Expect(output).To(MatchRegexp(fmt.Sprintf("Secret/%s/%s", id, id)))
+		g.Expect(output).To(MatchRegexp("patch"))
 	})
 }

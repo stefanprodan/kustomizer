@@ -19,6 +19,7 @@ package inventory
 import (
 	"github.com/fluxcd/pkg/ssa"
 	"sort"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -56,7 +57,7 @@ type Entry struct {
 
 func NewInventory(name, namespace string) *Inventory {
 	return &Inventory{
-		Name:      name,
+		Name:      strings.TrimPrefix(name, InventoryPrefix),
 		Namespace: namespace,
 		Entries:   []Entry{},
 	}

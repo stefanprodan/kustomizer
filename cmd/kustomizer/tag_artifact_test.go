@@ -35,9 +35,9 @@ func TestTag(t *testing.T) {
 	dir, err := makeTestDir(id, testManifests(id, id, false))
 	g.Expect(err).NotTo(HaveOccurred())
 
-	t.Run("build and push artifact", func(t *testing.T) {
+	t.Run("push artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"build -a %s -k %s",
+			"push artifact %s -k %s",
 			artifact,
 			dir,
 		))

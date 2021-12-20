@@ -29,9 +29,18 @@ import (
 )
 
 var getInventories = &cobra.Command{
-	Use:   "inventories",
-	Short: "Get prints the content of all inventories in the given namespace.",
-	RunE:  runGetInventoriesCmd,
+	Use:     "inventory",
+	Aliases: []string{"inv", "inventories"},
+	Short:   "Get prints a table with the inventories in the given namespace.",
+	Example: ` kustomizer get inventories -n <namespace>
+
+  # Get an inventory in the specified namespace
+  kustomizer get inventory my-app -n apps
+
+  # Get all inventories in the specified namespace
+  kustomizer get inventories -n apps
+`,
+	RunE: runGetInventoriesCmd,
 }
 
 func init() {
@@ -41,7 +50,7 @@ func init() {
 func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 
 	if kubeconfigArgs.Namespace == nil {
-		return fmt.Errorf("you must specify an intentory namespace")
+		return fmt.Errorf("you must specify an inventory namespace")
 	}
 
 	kubeClient, err := newKubeClient(kubeconfigArgs)
@@ -56,7 +65,7 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 
 	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 
-	invStorage := &inventory.InventoryStorage{
+	invStorage := &inventory.Storage{
 		Manager: resMgr,
 		Owner:   inventoryOwner,
 	}
@@ -65,16 +74,18 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	list := &corev1.ConfigMapList{}
-	err = resMgr.Client().List(ctx, list, client.InNamespace(*kubeconfigArgs.Namespace), client.MatchingLabels{
-		"app.kubernetes.io/component":  "inventory",
-		"app.kubernetes.io/created-by": "kustomizer",
-	})
+	err = resMgr.Client().List(ctx, list, client.InNamespace(*kubeconfigArgs.Namespace), invStorage.GetOwnerLabels())
 	if err != nil {
 		return err
 	}
 
 	var rows [][]string
 	for _, cm := range list.Items {
+		if len(args) > 0 {
+			if name := args[0]; name != "" && cm.Name != inventory.InventoryPrefix+name {
+				continue
+			}
+		}
 		var ts string
 		var source string
 		var rev string
@@ -91,7 +102,7 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 		if err := invStorage.GetInventory(ctx, i); err != nil {
 			return err
 		}
-		row := []string{cm.GetName(), fmt.Sprintf("%v", len(i.Entries)), source, rev, ts}
+		row := []string{i.Name, fmt.Sprintf("%v", len(i.Entries)), source, rev, ts}
 		rows = append(rows, row)
 	}
 

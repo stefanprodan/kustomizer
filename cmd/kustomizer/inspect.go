@@ -22,7 +22,7 @@ import (
 
 var inspectCmd = &cobra.Command{
 	Use:   "inspect",
-	Short: "Inspect artifacts from a container registries.",
+	Short: "Inspect artifacts and inventories.",
 }
 
 func init() {
