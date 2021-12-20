@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  kind:
+  kubernetes:
     runs-on: ubuntu-latest
     services:
       registry:
@@ -33,14 +33,6 @@ jobs:
         with:
           version: v0.11.1
           image: kindest/node:v1.23.0
-      - name: Run test
-        run: make test
-      - name: Check if working tree is dirty
-        run: |
-          if [[ $(git diff --stat) != '' ]]; then
-            echo 'run "make test" and commit changes'
-            exit 1
-          fi
       - name: Build
         run: make build
       - name: Test OCI
