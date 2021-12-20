@@ -47,7 +47,7 @@ type Storage struct {
 
 // ApplyInventory creates or updates the storage object for the given inventory.
 func (s *Storage) ApplyInventory(ctx context.Context, i *Inventory, createNamespace bool) error {
-	data, err := json.Marshal(i.Entries)
+	data, err := json.Marshal(i.Resources)
 	if err != nil {
 		return err
 	}
@@ -88,13 +88,13 @@ func (s *Storage) GetInventory(ctx context.Context, i *Inventory) error {
 
 	s.metaFromAnnotations(i, cm.GetAnnotations())
 
-	var entries []Entry
+	var entries []Resource
 	err = json.Unmarshal([]byte(cm.Data[KindName]), &entries)
 	if err != nil {
 		return err
 	}
 
-	i.Entries = entries
+	i.Resources = entries
 
 	return nil
 }
@@ -179,7 +179,7 @@ func (s *Storage) metaFromAnnotations(inv *Inventory, annotations map[string]str
 		case s.Owner.Group + "/revision":
 			inv.Revision = v
 		case s.Owner.Group + "/last-applied-time":
-			inv.LastAppliedTime = v
+			inv.LastAppliedAt = v
 		}
 	}
 }

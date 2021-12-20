@@ -95,9 +95,9 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 	for _, inv := range inventories {
 		row := []string{}
 		if getInventoriesArgs.allNamespaces {
-			row = []string{inv.Name, inv.Namespace, fmt.Sprintf("%v", len(inv.Entries)), inv.Source, inv.Revision, inv.LastAppliedTime}
+			row = []string{inv.Name, inv.Namespace, fmt.Sprintf("%v", len(inv.Resources)), inv.Source, inv.Revision, inv.LastAppliedAt}
 		} else {
-			row = []string{inv.Name, fmt.Sprintf("%v", len(inv.Entries)), inv.Source, inv.Revision, inv.LastAppliedTime}
+			row = []string{inv.Name, fmt.Sprintf("%v", len(inv.Resources)), inv.Source, inv.Revision, inv.LastAppliedAt}
 		}
 		rows = append(rows, row)
 	}

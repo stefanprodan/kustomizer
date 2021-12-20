@@ -77,8 +77,8 @@ func runInspectInventoryCmd(cmd *cobra.Command, args []string) error {
 	rootCmd.Println(fmt.Sprintf("Inventory: %s/%s", i.Namespace, i.Name))
 	rootCmd.Println(fmt.Sprintf("Source: %s", i.Source))
 	rootCmd.Println(fmt.Sprintf("Revision: %s", i.Revision))
-	rootCmd.Println(fmt.Sprintf("LastAppliedTime: %s", i.LastAppliedTime))
-	rootCmd.Println("Entries:")
+	rootCmd.Println(fmt.Sprintf("LastAppliedAt: %s", i.LastAppliedAt))
+	rootCmd.Println("Resources:")
 	entries, err := i.ListMeta()
 	if err != nil {
 		return err

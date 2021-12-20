@@ -27,28 +27,27 @@ import (
 
 // Inventory is a record of objects that are applied on a cluster stored as a configmap.
 type Inventory struct {
-	// Name of the inventory configmap.
+	// Name of the inventory.
 	Name string `json:"name"`
 
-	// Namespace of the inventory configmap.
+	// Namespace of the inventory.
 	Namespace string `json:"namespace"`
 
-	// Source is the URL of the source code.
+	// Source is the repository URL.
 	Source string `json:"source,omitempty"`
 
-	// Revision is the Source control revision identifier.
+	// Revision is the source revision identifier.
 	Revision string `json:"revision,omitempty"`
 
-	// LastAppliedTime is the timestamp (UTC RFC3339) of the last successful apply.
-	LastAppliedTime string `json:"lastAppliedTime,omitempty"`
+	// LastAppliedAt is the timestamp (UTC RFC3339) of the last successful apply.
+	LastAppliedAt string `json:"lastAppliedTime,omitempty"`
 
-	// Entries of Kubernetes objects metadata.
-	Entries []Entry `json:"entries"`
+	// Resources is the list of Kubernetes object IDs.
+	Resources []Resource `json:"resources"`
 }
 
-// Entry contains the information necessary to locate the
-// resource within a cluster.
-type Entry struct {
+// Resource contains the information necessary to locate the Kubernetes object.
+type Resource struct {
 	// ObjectID is the string representation of object.ObjMetadata,
 	// in the format '<namespace>_<name>_<group>_<kind>'.
 	ObjectID string `json:"id"`
@@ -61,7 +60,7 @@ func NewInventory(name, namespace string) *Inventory {
 	return &Inventory{
 		Name:      name,
 		Namespace: namespace,
-		Entries:   []Entry{},
+		Resources: []Resource{},
 	}
 }
 
@@ -85,7 +84,7 @@ func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
 			return err
 		}
 
-		inv.Entries = append(inv.Entries, Entry{
+		inv.Resources = append(inv.Resources, Resource{
 			ObjectID:      objMetadata.String(),
 			ObjectVersion: gv.Version,
 		})
@@ -96,7 +95,7 @@ func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
 
 // VersionOf returns the API version of the given object if found in this inventory.
 func (inv *Inventory) VersionOf(objMetadata object.ObjMetadata) string {
-	for _, entry := range inv.Entries {
+	for _, entry := range inv.Resources {
 		if entry.ObjectID == objMetadata.String() {
 			return entry.ObjectVersion
 		}
@@ -108,7 +107,7 @@ func (inv *Inventory) VersionOf(objMetadata object.ObjMetadata) string {
 func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 
-	for _, entry := range inv.Entries {
+	for _, entry := range inv.Resources {
 		objMetadata, err := object.ParseObjMetadata(entry.ObjectID)
 		if err != nil {
 			return nil, err
@@ -132,7 +131,7 @@ func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 // ListMeta returns the inventory entries as object.ObjMetadata objects.
 func (inv *Inventory) ListMeta() (object.ObjMetadataSet, error) {
 	var metas []object.ObjMetadata
-	for _, e := range inv.Entries {
+	for _, e := range inv.Resources {
 		m, err := object.ParseObjMetadata(e.ObjectID)
 		if err != nil {
 			return metas, err
