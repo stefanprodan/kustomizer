@@ -140,11 +140,11 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		if change.Action == string(ssa.CreatedAction) {
-			fmt.Println(`►`, change.Subject, "created")
+			rootCmd.Println(`►`, change.Subject, "created")
 		}
 
 		if change.Action == string(ssa.ConfiguredAction) {
-			fmt.Println(`►`, change.Subject, "drifted")
+			rootCmd.Println(`►`, change.Subject, "drifted")
 
 			liveYAML, _ := yaml.Marshal(liveObject)
 			liveFile := filepath.Join(tmpDir, "live.yaml")
@@ -161,7 +161,7 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 			out, _ := exec.Command("diff", "-N", "-u", liveFile, mergedFile).Output()
 			for i, line := range strings.Split(string(out), "\n") {
 				if i > 1 && len(line) > 0 {
-					fmt.Println(line)
+					rootCmd.Println(line)
 				}
 			}
 		}
@@ -174,7 +174,7 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		for _, object := range staleObjects {
-			fmt.Println(`►`, fmt.Sprintf("%s deleted", ssa.FmtUnstructured(object)))
+			rootCmd.Println(`►`, fmt.Sprintf("%s deleted", ssa.FmtUnstructured(object)))
 		}
 	}
 
