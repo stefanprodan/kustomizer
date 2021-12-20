@@ -32,7 +32,7 @@ install-envtest: setup-envtest
 
 KUBEBUILDER_ASSETS?="$(shell $(SETUP_ENVTEST) --arch=$(ENVTEST_ARCH) use -i $(ENVTEST_KUBERNETES_VERSION) --bin-dir=$(ENVTEST_ASSETS_DIR) -p path)"
 test: tidy fmt vet install-envtest
-	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -parallel 4 -coverprofile cover.out
+	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./cmd/... -v -parallel 4 -coverprofile cover.out
 
 test-race: tidy fmt vet install-envtest
 	KUBEBUILDER_ASSETS=$(KUBEBUILDER_ASSETS) go test ./... -v -race -parallel 4 -coverprofile cover.out

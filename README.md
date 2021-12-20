@@ -1,6 +1,8 @@
 # kustomizer
 
+[![report](https://goreportcard.com/badge/github.com/stefanprodan/kustomizer)](https://goreportcard.com/report/github.com/stefanprodan/kustomizer)
 [![e2e](https://github.com/stefanprodan/kustomizer/workflows/e2e/badge.svg)](https://github.com/stefanprodan/kustomizer/actions)
+[![codecov](https://codecov.io/gh/stefanprodan/kustomizer/branch/main/graph/badge.svg?token=KEU5W1LSZC)](https://codecov.io/gh/stefanprodan/kustomizer)
 [![license](https://img.shields.io/github/license/stefanprodan/kustomizer.svg)](https://github.com/stefanprodan/kustomizer/blob/main/LICENSE)
 [![release](https://img.shields.io/github/release/stefanprodan/kustomizer/all.svg)](https://github.com/stefanprodan/kustomizer/releases)
 
