@@ -42,7 +42,7 @@ import (
 var buildInventoryCmd = &cobra.Command{
 	Use:     "inventory",
 	Aliases: []string{"inv"},
-	Short:   "Build generates an inventory and writes the reusing Kubernetes manifests to stdout.",
+	Short:   "Build generates an inventory and writes the resulting Kubernetes manifests to stdout.",
 	Example: `  kustomizer build inventory <name> [-a] [-p] [-f] -k
 
   # Build the inventory from remote OCI artifacts and print the resulting multi-doc YAML
