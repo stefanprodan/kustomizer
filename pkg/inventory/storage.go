@@ -19,6 +19,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fluxcd/pkg/ssa"
@@ -31,8 +32,8 @@ import (
 )
 
 const (
-	InventoryKindName = "inventory"
-	InventoryPrefix   = "inv-"
+	KindName          = "inventory"
+	storagePrefix     = "inv-"
 	nameLabelKey      = "app.kubernetes.io/name"
 	componentLabelKey = "app.kubernetes.io/component"
 	createdByLabelKey = "app.kubernetes.io/created-by"
@@ -44,113 +45,86 @@ type Storage struct {
 	Owner   ssa.Owner
 }
 
-// GetOwnerLabels returns the inventory storage common labels.
-func (m *Storage) GetOwnerLabels() client.MatchingLabels {
-	return client.MatchingLabels{
-		componentLabelKey: InventoryKindName,
-		createdByLabelKey: m.Owner.Field,
-	}
-}
-
-// CreateNamespace creates the inventory namespace if not present.
-func (m *Storage) CreateNamespace(ctx context.Context, name string) error {
-	ns := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				createdByLabelKey: m.Owner.Field,
-			},
-		},
-	}
-
-	if err := m.Manager.Client().Get(ctx, client.ObjectKeyFromObject(ns), ns); err != nil {
-		if apierrors.IsNotFound(err) {
-			opts := []client.PatchOption{
-				client.ForceOwnership,
-				client.FieldOwner(m.Owner.Field),
-			}
-			return m.Manager.Client().Patch(ctx, ns, client.Apply, opts...)
-		} else {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // ApplyInventory creates or updates the storage object for the given inventory.
-func (m *Storage) ApplyInventory(ctx context.Context, i *Inventory) error {
+func (s *Storage) ApplyInventory(ctx context.Context, i *Inventory, createNamespace bool) error {
 	data, err := json.Marshal(i.Entries)
 	if err != nil {
 		return err
 	}
 
-	cm := m.newConfigMap(i.Name, i.Namespace)
-	cm.Annotations = map[string]string{
-		m.Owner.Group + "/last-applied-time": time.Now().UTC().Format(time.RFC3339),
-	}
-	if i.Source != "" {
-		cm.Annotations[m.Owner.Group+"/source"] = i.Source
-	}
-	if i.Revision != "" {
-		cm.Annotations[m.Owner.Group+"/revision"] = i.Revision
+	if createNamespace {
+		if err := s.createNamespace(ctx, i.Namespace); err != nil {
+			return err
+		}
 	}
 
+	cm := s.newConfigMap(i.Name, i.Namespace)
+	cm.Annotations = s.metaToAnnotations(i)
+
 	cm.Data = map[string]string{
-		InventoryKindName: string(data),
+		KindName: string(data),
 	}
 
 	opts := []client.PatchOption{
 		client.ForceOwnership,
-		client.FieldOwner(m.Owner.Field),
+		client.FieldOwner(s.Owner.Field),
 	}
-	return m.Manager.Client().Patch(ctx, cm, client.Apply, opts...)
+	return s.Manager.Client().Patch(ctx, cm, client.Apply, opts...)
 }
 
 // GetInventory retrieves the entries from the storage for the given inventory name and namespace.
-func (m *Storage) GetInventory(ctx context.Context, i *Inventory) error {
-	cm := m.newConfigMap(i.Name, i.Namespace)
+func (s *Storage) GetInventory(ctx context.Context, i *Inventory) error {
+	cm := s.newConfigMap(i.Name, i.Namespace)
 
 	cmKey := client.ObjectKeyFromObject(cm)
-	err := m.Manager.Client().Get(ctx, cmKey, cm)
+	err := s.Manager.Client().Get(ctx, cmKey, cm)
 	if err != nil {
 		return err
 	}
 
-	if _, ok := cm.Data[InventoryKindName]; !ok {
+	if _, ok := cm.Data[KindName]; !ok {
 		return fmt.Errorf("inventory data not found in ConfigMap/%s", cmKey)
 	}
 
+	s.metaFromAnnotations(i, cm.GetAnnotations())
+
 	var entries []Entry
-	err = json.Unmarshal([]byte(cm.Data[InventoryKindName]), &entries)
+	err = json.Unmarshal([]byte(cm.Data[KindName]), &entries)
 	if err != nil {
 		return err
 	}
 
 	i.Entries = entries
 
-	for k, v := range cm.GetAnnotations() {
-		switch k {
-		case m.Owner.Group + "/source":
-			i.Source = v
-		case m.Owner.Group + "/revision":
-			i.Revision = v
-		}
-	}
-
 	return nil
 }
 
+// ListInventories returns the inventories in the given namespace.
+func (s *Storage) ListInventories(ctx context.Context, namespace string) ([]*Inventory, error) {
+	var inventories []*Inventory
+	cmList := &corev1.ConfigMapList{}
+	err := s.Manager.Client().List(ctx, cmList, client.InNamespace(namespace), s.getOwnerLabels())
+	if err != nil {
+		return inventories, err
+	}
+
+	for _, cm := range cmList.Items {
+		i := NewInventory(strings.TrimPrefix(cm.GetName(), storagePrefix), cm.GetNamespace())
+		if err := s.GetInventory(ctx, i); err != nil {
+			return inventories, err
+		}
+		inventories = append(inventories, i)
+	}
+
+	return inventories, nil
+}
+
 // DeleteInventory removes the storage for the given inventory name and namespace.
-func (m *Storage) DeleteInventory(ctx context.Context, i *Inventory) error {
-	cm := m.newConfigMap(i.Name, i.Namespace)
+func (s *Storage) DeleteInventory(ctx context.Context, i *Inventory) error {
+	cm := s.newConfigMap(i.Name, i.Namespace)
 
 	cmKey := client.ObjectKeyFromObject(cm)
-	err := m.Manager.Client().Delete(ctx, cm)
+	err := s.Manager.Client().Delete(ctx, cm)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete ConfigMap/%s, error: %w", cmKey, err)
 	}
@@ -158,10 +132,10 @@ func (m *Storage) DeleteInventory(ctx context.Context, i *Inventory) error {
 }
 
 // GetInventoryStaleObjects returns the list of objects metadata subject to pruning.
-func (m *Storage) GetInventoryStaleObjects(ctx context.Context, i *Inventory) ([]*unstructured.Unstructured, error) {
+func (s *Storage) GetInventoryStaleObjects(ctx context.Context, i *Inventory) ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 	existingInventory := NewInventory(i.Name, i.Namespace)
-	if err := m.GetInventory(ctx, existingInventory); err != nil {
+	if err := s.GetInventory(ctx, existingInventory); err != nil {
 		if apierrors.IsNotFound(err) {
 			return objects, nil
 		}
@@ -176,20 +150,84 @@ func (m *Storage) GetInventoryStaleObjects(ctx context.Context, i *Inventory) ([
 	return objects, nil
 }
 
-func (m *Storage) newConfigMap(name, namespace string) *corev1.ConfigMap {
+func (s *Storage) getOwnerLabels() client.MatchingLabels {
+	return client.MatchingLabels{
+		componentLabelKey: KindName,
+		createdByLabelKey: s.Owner.Field,
+	}
+}
+
+func (s *Storage) metaToAnnotations(inv *Inventory) map[string]string {
+	annotations := map[string]string{
+		s.Owner.Group + "/last-applied-time": time.Now().UTC().Format(time.RFC3339),
+	}
+	if inv.Source != "" {
+		annotations[s.Owner.Group+"/source"] = inv.Source
+	}
+	if inv.Revision != "" {
+		annotations[s.Owner.Group+"/revision"] = inv.Revision
+	}
+
+	return annotations
+}
+
+func (s *Storage) metaFromAnnotations(inv *Inventory, annotations map[string]string) {
+	for k, v := range annotations {
+		switch k {
+		case s.Owner.Group + "/source":
+			inv.Source = v
+		case s.Owner.Group + "/revision":
+			inv.Revision = v
+		case s.Owner.Group + "/last-applied-time":
+			inv.LastAppliedTime = v
+		}
+	}
+}
+
+func (s *Storage) newConfigMap(name, namespace string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      InventoryPrefix + name,
+			Name:      storagePrefix + name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				nameLabelKey:      name,
-				componentLabelKey: InventoryKindName,
-				createdByLabelKey: m.Owner.Field,
+				componentLabelKey: KindName,
+				createdByLabelKey: s.Owner.Field,
 			},
 		},
 	}
+}
+
+// createNamespace creates the inventory namespace if not present.
+func (s *Storage) createNamespace(ctx context.Context, name string) error {
+	ns := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				createdByLabelKey: s.Owner.Field,
+			},
+		},
+	}
+
+	if err := s.Manager.Client().Get(ctx, client.ObjectKeyFromObject(ns), ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			opts := []client.PatchOption{
+				client.ForceOwnership,
+				client.FieldOwner(s.Owner.Field),
+			}
+			return s.Manager.Client().Patch(ctx, ns, client.Apply, opts...)
+		} else {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -17,10 +17,9 @@ limitations under the License.
 package inventory
 
 import (
-	"github.com/fluxcd/pkg/ssa"
 	"sort"
-	"strings"
 
+	"github.com/fluxcd/pkg/ssa"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
@@ -40,6 +39,9 @@ type Inventory struct {
 	// Revision is the Source control revision identifier.
 	Revision string `json:"revision,omitempty"`
 
+	// LastAppliedTime is the timestamp (UTC RFC3339) of the last successful apply.
+	LastAppliedTime string `json:"lastAppliedTime,omitempty"`
+
 	// Entries of Kubernetes objects metadata.
 	Entries []Entry `json:"entries"`
 }
@@ -57,7 +59,7 @@ type Entry struct {
 
 func NewInventory(name, namespace string) *Inventory {
 	return &Inventory{
-		Name:      strings.TrimPrefix(name, InventoryPrefix),
+		Name:      name,
 		Namespace: namespace,
 		Entries:   []Entry{},
 	}
