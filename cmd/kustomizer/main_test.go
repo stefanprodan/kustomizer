@@ -213,6 +213,7 @@ namespace: "%[1]s"
 resources:
   - config.yaml
   - secret.yaml
+  - cron.yaml
 `, namespace),
 		},
 		{
@@ -237,6 +238,29 @@ immutable: %[2]t
 stringData:
   key: "%[3]d"
 `, name, immutable, time.Now().UnixNano()),
+		},
+		{
+			Name: "cron.yaml",
+			Body: fmt.Sprintf(`---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "%[1]s"
+spec:
+  schedule: "*/30 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: version
+            image: ghcr.io://ghcr.io/stefanprodan/podinfo:v6.0.0
+            imagePullPolicy: IfNotPresent
+            command:
+            - ./podinfo
+            - --version
+`, name),
 		},
 	}
 }

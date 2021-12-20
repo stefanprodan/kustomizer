@@ -28,6 +28,7 @@ type Metadata struct {
 	Version  string `json:"version"`
 	Checksum string `json:"checksum"`
 	Created  string `json:"created"`
+	Digest   string `json:"digest"`
 }
 
 func (m *Metadata) ToAnnotations() map[string]string {
