@@ -22,7 +22,7 @@ import (
 
 var tagCmd = &cobra.Command{
 	Use:   "tag",
-	Short: "Set artifacts tags to container registries.",
+	Short: "Tag artifacts stored in container registries.",
 }
 
 func init() {

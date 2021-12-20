@@ -83,8 +83,11 @@ func runPushArtifactCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
+	defer cancel()
+
 	logger.Println("building manifests...")
-	objects, err := buildManifests(pushArtifactArgs.kustomize, pushArtifactArgs.filename, pushArtifactArgs.patch)
+	objects, err := buildManifests(ctx, pushArtifactArgs.kustomize, pushArtifactArgs.filename, nil, pushArtifactArgs.patch)
 	if err != nil {
 		return err
 	}
@@ -99,9 +102,6 @@ func runPushArtifactCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
-	defer cancel()
 
 	logger.Println("pushing image", url)
 	digest, err := registry.Push(ctx, url, yml, &registry.Metadata{

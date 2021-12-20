@@ -26,9 +26,9 @@ import (
 func TestGetInventory(t *testing.T) {
 	g := NewWithT(t)
 	id := "get-" + randStringRunes(5)
-	inventory := fmt.Sprintf("inv-%s", id)
+
 	source := "https://github.com/stefanprodan/kustomizer.git"
-	revision := "e44c210"
+	revision := "v2.0.0"
 
 	err := createNamespace(id)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -38,8 +38,8 @@ func TestGetInventory(t *testing.T) {
 
 	t.Run("creates objects", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"apply -i %s -k %s --inventory-namespace %s --source %s --revision %s",
-			inventory,
+			"apply inv %s -k %s --namespace %s --source %s --revision %s",
+			id,
 			dir,
 			id,
 			source,
@@ -51,16 +51,16 @@ func TestGetInventory(t *testing.T) {
 		g.Expect(output).To(MatchRegexp(id))
 	})
 
-	t.Run("lists inventory", func(t *testing.T) {
+	t.Run("prints inventory details", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"get inventory %s --namespace %s",
-			inventory,
+			"inspect inventory %s --namespace %s",
+			id,
 			id,
 		))
 
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
-		g.Expect(output).To(MatchRegexp(fmt.Sprintf("%s/%s", id, inventory)))
+		g.Expect(output).To(MatchRegexp(fmt.Sprintf("%s/%s", id, id)))
 		g.Expect(output).To(MatchRegexp(source))
 		g.Expect(output).To(MatchRegexp(revision))
 		g.Expect(output).To(MatchRegexp(fmt.Sprintf("ConfigMap/%s/%s", id, id)))

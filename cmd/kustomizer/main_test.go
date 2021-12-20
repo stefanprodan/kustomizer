@@ -198,8 +198,8 @@ func executeCommand(cmd string) (string, error) {
 }
 
 func resetCmdArgs() {
-	applyArgs = applyFlags{}
-	buildArgs = buildFlags{}
+	applyInventoryArgs = applyInventoryFlags{}
+	buildInventoryArgs = buildInventoryFlags{}
 }
 
 var testManifests = func(name, namespace string, immutable bool) []TestFile {

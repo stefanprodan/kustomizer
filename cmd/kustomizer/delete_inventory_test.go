@@ -44,7 +44,7 @@ func TestDelete(t *testing.T) {
 
 	t.Run("creates objects", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"apply -i %s -k %s --inventory-namespace %s",
+			"apply inv  %s -k %s --namespace %s",
 			inventory,
 			dir,
 			id,
@@ -57,7 +57,7 @@ func TestDelete(t *testing.T) {
 
 	t.Run("deletes objects", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
-			"delete -i %s --inventory-namespace %s",
+			"delete inv %s -n %s",
 			inventory,
 			id,
 		))

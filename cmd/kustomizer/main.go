@@ -62,7 +62,12 @@ func init() {
 		"The length of time to wait before giving up on the current operation.")
 
 	kubeconfigArgs.Timeout = nil
+	kubeconfigArgs.Namespace = nil
 	kubeconfigArgs.AddFlags(rootCmd.PersistentFlags())
+
+	defaultNamespace := "default"
+	kubeconfigArgs.Namespace = &defaultNamespace
+	rootCmd.PersistentFlags().StringVarP(kubeconfigArgs.Namespace, "namespace", "n", *kubeconfigArgs.Namespace, "The inventory namespace.")
 
 	rootCmd.DisableAutoGenTag = true
 	rootCmd.SetOut(os.Stdout)
