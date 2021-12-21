@@ -1,40 +1,22 @@
-# Kustomizer GitHub Action
+# Kustomizer GitHub Actions
 
-You can use Kustomizer to push OCI artifacts to container registries and deploy to Kubernetes from CI.
+You can use Kustomizer to push artifacts to container registries and
+deploy to Kubernetes from your GitHub workflows.
 
 ## Usage
 
+To run Kustomizer commands on GitHub **Linux** runners,
+add the following steps to your GitHub workflow:
+
 ```yaml
     steps:
       - name: Setup Kustomizer CLI
         uses: stefanprodan/kustomizer/action@main
+        with:
+          version: 2.0.0 # defaults to latest
+          arch: amd64 # can be amd64 or arm64
       - name: Run Kustomizer commands
         run: kustomizer -v
-```
-
-The latest stable version of the `kustomizer` binary is downloaded from
-GitHub [releases](https://github.com/stefanprodan/kustomizer/releases)
-and placed at `/usr/local/bin/kustomizer`.
-
-Note that this action can only be used on GitHub **Linux** runners.
-You can change the arch (defaults to `amd64`) with:
-
-```yaml
-    steps:
-      - name: Setup Kustomizer CLI
-        uses: stefanprodan/kustomizer/action@main
-        with:
-          arch: arm64 # can be amd64 or arm64
-```
-
-You can download a specific version with:
-
-```yaml
-    steps:
-      - name: Setup Kustomizer CLI
-        uses: stefanprodan/kustomizer/action@main
-        with:
-          version: 2.0.0
 ```
 
 ## Publish artifacts to GHCR
