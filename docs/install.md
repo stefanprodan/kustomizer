@@ -10,19 +10,10 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
     ```shell
     curl -s https://kustomizer.dev/install.sh | sudo bash
     ```
-    
+
+    The install script downloads the latest release from GitHub and copies the kustomizer binary to `/usr/local/bin`.    
     If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
     of the release using the public key from [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
-    
-    The install script does the following:
-
-    - attempts to detect your OS
-    - downloads the [release tar file](https://github.com/stefanprodan/kustomizer/releases) and its signature in a temporary directory
-    - verifies the signature with cosign
-    - unpacks the release tar file
-    - verifies the binary checksum
-    - copies the kustomizer binary to `/usr/local/bin`
-    - removes the temporary directory
 
 === "Install from source"
 
@@ -30,6 +21,82 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
     
     ```shell
     go install github.com/stefanprodan/kustomizer/cmd/kustomizer@latest
+    ```
+
+## Shell autocompletion
+
+Configure your shell to load kustomizer completions:
+
+=== "bash"
+
+    To load completion run:
+    
+    ```shell
+    . <(kustomizer completion bash)
+    ```
+
+    To configure your bash shell to load completions for each session add to your bashrc:
+
+    ```shell
+    # ~/.bashrc or ~/.profile
+    command -v kustomizer >/dev/null && . <(kustomizer completion bash)
+    ```
+
+=== "fish"
+
+    To configure your fish shell to [load completions](http://fishshell.com/docs/current/index.html#completion-own)
+    for each session write this script to your completions dir:
+    
+    ```shell
+    kustomizer completion fish > ~/.config/fish/completions/kustomizer.fish
+    ```
+
+=== "powershell"
+
+    To load completion run:
+
+    ```shell
+    . <(kustomizer completion powershell)
+    ```
+
+    To configure your powershell shell to load completions for each session add to your powershell profile:
+    
+    Windows:
+
+    ```shell
+    cd "$env:USERPROFILE\Documents\WindowsPowerShell\Modules"
+    kustomizer completion >> kustomizer-completion.ps1
+    ```
+    Linux:
+
+    ```shell
+    cd "${XDG_CONFIG_HOME:-"$HOME/.config/"}/powershell/modules"
+    kustomizer completion >> kustomizer-completions.ps1
+    ```
+
+=== "zsh"
+
+    To load completion run:
+    
+    ```shell
+    . <(kustomizer completion zsh) && compdef _kustomizer kustomizer
+    ```
+
+    To configure your zsh shell to load completions for each session add to your zshrc:
+    
+    ```shell
+    # ~/.zshrc or ~/.profile
+    command -v kustomizer >/dev/null && . <(kustomizer completion zsh) && compdef _kustomizer kustomizer
+    ```
+
+    or write a cached file in one of the completion directories in your ${fpath}:
+    
+    ```shell
+    echo "${fpath// /\n}" | grep -i completion
+    kustomizer completion zsh > _kustomizer
+    
+    mv _kustomizer ~/.oh-my-zsh/completions  # oh-my-zsh
+    mv _kustomizer ~/.zprezto/modules/completion/external/src/  # zprezto
     ```
 
 ## Configuration
