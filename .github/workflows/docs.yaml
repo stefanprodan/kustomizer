@@ -2,10 +2,10 @@ name: docs
 
 on:
   push:
-    branches: [ 'mkdocs*', main ]
+    branches: [ 'mkdocs*', 'docs*', main ]
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
