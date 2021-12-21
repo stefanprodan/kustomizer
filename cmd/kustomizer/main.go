@@ -38,7 +38,28 @@ var rootCmd = &cobra.Command{
 	Version:       VERSION,
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	Short:         "A command line utility for reconciling Kubernetes manifests and Kustomize overlays.",
+	Short:         "A command line utility to publish, fetch, customize, validate, and apply Kubernetes configuration.",
+	Long: `Kustomizer is an OSS tool for building Kubernetes continuous delivery workflows.
+
+Distribute Kubernetes configuration as OCI artifacts to container registries:
+
+- kustomizer push artifact oci://<image-url>:<tag> -k [-f] [-p]
+- kustomizer tag artifact oci://<image-url>:<tag> <new-tag>
+- kustomizer pull artifact oci://<image-url>:<tag>
+- kustomizer inspect artifact oci://<image-url>:<tag>
+
+Build, customize and apply Kubernetes resources:
+
+- kustomizer build inventory <name> [-a <oci url>] [-f <dir path>] [-p <patch path>] -k <overlay path>
+- kustomizer apply inventory <name> -n <namespace> [-a] [-f] [-p] -k --prune --wait --force
+- kustomizer diff inventory <name> -n <namespace> [-a] [-f] [-p] -k
+
+Manage the applied Kubernetes resources:
+
+- kustomizer get inventories --namespace <namespace>
+- kustomizer inspect inventory <name> --namespace <namespace>
+- kustomizer delete inventory <name> --namespace <namespace>
+`,
 }
 
 type rootFlags struct {

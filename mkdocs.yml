@@ -34,6 +34,27 @@ markdown_extensions:
 
 nav:
   - Introduction: index.md
-  - Install: install.md
   - Get Started: get-started.md
-  - GitHub Action: github-action.md
+  - Install: install.md
+  - GitHub Actions: github-actions.md
+  - Command Reference:
+      - Artifact:
+          - Push: cmd/kustomizer_push_artifact.md
+          - Tag: cmd/kustomizer_tag_artifact.md
+          - Pull: cmd/kustomizer_pull_artifact.md
+          - Inspect: cmd/kustomizer_inspect_artifact.md
+      - Inventory:
+          - Apply: cmd/kustomizer_apply_inventory.md
+          - Build: cmd/kustomizer_build_inventory.md
+          - Diff: cmd/kustomizer_diff_inventory.md
+          - Inspect: cmd/kustomizer_inspect_inventory.md
+          - Get: cmd/kustomizer_get_inventory.md
+          - Delete: cmd/kustomizer_delete_inventory.md
+      - Config:
+          - Init: cmd/kustomizer_config_init.md
+          - View: cmd/kustomizer_config_view.md
+      - Completion:
+          - Bash: cmd/kustomizer_completion_bash.md
+          - Fish: cmd/kustomizer_completion_fish.md
+          - Powershell: cmd/kustomizer_completion_powershell.md
+          - ZSH: cmd/kustomizer_completion_zsh.md
