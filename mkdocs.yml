@@ -1,0 +1,60 @@
+site_name: kustomizer
+site_description: |
+  Build, diff, apply, prune command-line utility for Kubernetes manifests and Kustomize overlays.
+  Powered by Kubernetes server-side apply.
+site_author: Stefan Prodan
+site_url: https://kustomizer.dev
+
+repo_name: stefanprodan/kustomizer
+repo_url: https://github.com/stefanprodan/kustomizer
+edit_uri: ""
+
+theme:
+  name: material
+  #logo: _assets/logo.png
+  language: en
+  palette:
+    primary: deep purple
+    accent: indigo
+
+docs_dir: docs
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - meta
+  - codehilite
+  - pymdownx.tabbed
+  - pymdownx.tilde
+  - pymdownx.progressbar
+  - pymdownx.tasklist
+  - pymdownx.superfences
+
+nav:
+  - Introduction: index.md
+  - Get Started: get-started.md
+  - Install: install.md
+  - GitHub Actions: github-actions.md
+  - Command Reference:
+      - Artifact:
+          - Push: cmd/kustomizer_push_artifact.md
+          - Tag: cmd/kustomizer_tag_artifact.md
+          - Pull: cmd/kustomizer_pull_artifact.md
+          - Inspect: cmd/kustomizer_inspect_artifact.md
+      - Inventory:
+          - Apply: cmd/kustomizer_apply_inventory.md
+          - Build: cmd/kustomizer_build_inventory.md
+          - Diff: cmd/kustomizer_diff_inventory.md
+          - Inspect: cmd/kustomizer_inspect_inventory.md
+          - Get: cmd/kustomizer_get_inventory.md
+          - Delete: cmd/kustomizer_delete_inventory.md
+      - Config:
+          - Init: cmd/kustomizer_config_init.md
+          - View: cmd/kustomizer_config_view.md
+      - Completion:
+          - Bash: cmd/kustomizer_completion_bash.md
+          - Fish: cmd/kustomizer_completion_fish.md
+          - Powershell: cmd/kustomizer_completion_powershell.md
+          - ZSH: cmd/kustomizer_completion_zsh.md
