@@ -44,3 +44,26 @@ signs:
     stdin: '{{ .Env.COSIGN_PASSWORD }}'
     args: ["sign-blob", "--key=/tmp/cosign.key", "--output=${signature}", "${artifact}"]
     artifacts: all
+brews:
+  - name: kustomizer
+    tap:
+      owner: stefanprodan
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: "https://kustomizer.dev/"
+    description: "Kustomizer CLI"
+    dependencies:
+      - name: diffutils
+        type: optional
+    install: |
+      bin.install "kustomizer"
+      bash_output = Utils.safe_popen_read(bin/"kustomizer", "completion", "bash")
+      (bash_completion/"kustomizer").write bash_output
+      zsh_output = Utils.safe_popen_read(bin/"kustomizer", "completion", "zsh")
+      (zsh_completion/"_kustomizer").write zsh_output
+      fish_output = Utils.safe_popen_read(bin/"kustomizer", "completion", "fish")
+      (fish_completion/"kustomizer.fish").write fish_output
+    test: |
+      system "#{bin}/kustomizer --version"
