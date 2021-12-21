@@ -1,101 +1,52 @@
-## Using container registries to distribute Kubernetes manifests
+## Using container registries to distribute Kubernetes configs
 
-Kustomizer can package Kubernetes manifests in an OCI image and store them in a container registry,
-right next to your applications' images.
-
-Similar to Docker, Kustomizer offers commands to manage OCI artifacts:
-
-* `kustomizer push artifact oci://<image-url>:<tag>` Push uploads Kubernetes manifests to a container registry.
-* `kustomizer tag artifact oci://<image-url>:<tag> <new-tag>` Tag adds a tag for the specified OCI artifact.
-* `kustomizer pull artifact oci://<image-url>:<tag>` Pull downloads Kubernetes manifests from a container registry.
-* `kustomizer inspect artifact oci://<image-url>:<tag>` Inspect downloads the specified OCI artifact and prints a report of its content.
-
-Kustomizer uses [go-containerregistry](https://github.com/google/go-containerregistry)
-for interacting with container registries, and it's compatible with
-Docker Hub, GHCR, ACR, ECR, GCR, Artifactory, self-hosted Docker Registry and others.
-For auth, Kustomizer uses the credentials from `~/.docker/config.json`.
-
-Assuming you've automated your application's build & push workflow using Docker,
-you can extend the automation to do the same for your Kubernetes manifests that describe how your
-application gets deployed.
-
-Build a Kustomize overlay and push the multi-doc YAML to Docker Hub:
-
-```shell
-kustomizer build -k ./overlays/dist --artifact oci://docker.io/org/app-config:v1.0.0
-kustomizer tag artifact oci://docker.io/org/app-config:v1.0.0 latest
-```
-
-If you're using cue, cdk8s, jsonnet, helm or any other tool that generates Kubernetes manifests,
-you can pass the multi-doc YAML to Kustomizer with:
-
-```shell
-cue cmd ymldump ./deploy/app > app-config.yaml
-kustomizer push artifact oci://docker.io/org/app-config:v1.0.0 -f app-config.yaml
-```
-
-Pull the app config image and diff changes with Kubernetes server-side apply dry-run:
-
-```shell
-kustomizer pull artifact oci://docker.io/org/app-config:v1.0.0 | kustomizer diff -i app -f-
-```
-
-Apply the latest app config on your cluster:
-
-```shell
-kustomizer apply -i app -a oci://docker.io/org/app-config:latest
-```
-
-## OCI Demo
-
-This an example of how to use Kustomizer, Sigstore consign and GitHub Container Registry
+This is a tutorial on how to use Kustomizer, Consign, Trivy and GitHub Container Registry
 to build a secure delivery pipeline for your apps.
 
 Publisher workflow:
 - tag app release
 - build and push the app image
-- update the app version the config manifests
+- update the app version in the Kubernetes configuration
 - build and push the app config image
-- sign both images (app and config) with cosign
+- sign the app and config images
 
 Consumer workflow:
-- verify the config image with cosign
+- verify the config image provenance
 - inspect the config image and extract the app container image name
-- verify the app image with cosign
+- verify the app image provenance
+- scan the app image for vulnerabilities
 - deploy the app on Kubernetes using the manifest from the config image
 
 ## Prerequisites
 
-Export you GitHub username: 
+Export you GitHub username:
 
 ```shell
 export GITHUB_USER="YOUR-GITHUB-USERNAME"
 ```
 
-Login to ghcr.io ([docs](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)) with docker:
+Login to GitHub [Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry):
 
-```shell
-echo <GHCR-PUSH-TOKEN> | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
-```
+=== "docker"
 
-If you don't have Docker installed, you can use [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane):
+    ```shell
+    echo <GHCR-PUSH-TOKEN> | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
+    ```
 
-```shell
-go install github.com/google/go-containerregistry/cmd/crane@latest
-echo <GHCR-PUSH-TOKEN> | crane auth login ghcr.io -u ${GITHUB_USER} --password-stdin
-```
+=== "crane"
+
+    ```shell
+    go install github.com/google/go-containerregistry/cmd/crane@latest
+    echo <GHCR-PUSH-TOKEN> | crane auth login ghcr.io -u ${GITHUB_USER} --password-stdin
+    ```
 
 Install [cosign](https://docs.sigstore.dev/cosign/installation/) and generate a key for image signing:
 
 ```shell
-$ cosign generate-key-pair
-Enter password for private key:
-Enter again:
-Private key written to cosign.key
-Public key written to cosign.pub
+cosign generate-key-pair
 ```
 
-## Publish
+## Publish and Sign the app config
 
 Clone the Kustomizer Git repository locally:
 
@@ -107,13 +58,15 @@ cd kustomizer
 Export the app config version:
 
 ```shell
+export CONFIG_IMAGE="ghcr.io/${GITHUB_USER}/kustomizer-demo-app"
 export CONFIG_VERSION="1.0.0"
 ```
 
 Build and push the config image:
 
 ```console
-$ kustomizer build -k ./testdata/oci/demo-app/ -a oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} 
+$ kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+    -k ./testdata/oci/demo-app/
 building manifests...
 Namespace/kustomizer-demo-app
 ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
@@ -132,22 +85,22 @@ published digest ghcr.io/stefanprodan/kustomizer-demo-app@sha256:91d2bd8e0f1620e
 Sign the config image using your cosign private key:
 
 ```console
-$ cosign sign --key cosign.key ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
+$ cosign sign --key cosign.key ${CONFIG_IMAGE}:${CONFIG_VERSION}
 Pushing signature to: ghcr.io/stefanprodan/kustomizer-demo-app
 ```
 
 Tag the config image as latest:
 
 ```shell
-kustomizer tag artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} latest
+kustomizer tag artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} latest
 ```
 
-## Verify and Inspect
+## Verify and Scan the app
 
 Verify the config image using your cosign public key:
 
 ```console
-$ cosign verify --key cosign.pub ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
+$ cosign verify --key cosign.pub ${CONFIG_IMAGE}:${CONFIG_VERSION}
 Verification for ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0 --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
@@ -160,44 +113,42 @@ The following checks were performed on each of these signatures:
 List the Kubernetes manifests from the config image:
 
 ```console
-$ kustomizer inspect artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
-Built by: kustomizer v1.3.0
-Created at: 2021-12-15T10:05:46Z
-Checksum: 5b8c45af6951e977581122b7848b490f25b43ffd44ed7a82fd574eff6aac06be
-Manifests:
-   Namespace/kustomizer-demo-app
-   ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
-   Service/kustomizer-demo-app/backend
-   Service/kustomizer-demo-app/cache
-   Service/kustomizer-demo-app/frontend
-   Deployment/kustomizer-demo-app/backend
-   - ghcr.io/stefanprodan/podinfo:6.0.0
-   Deployment/kustomizer-demo-app/cache
-   - public.ecr.aws/docker/library/redis:6.2.0
-   Deployment/kustomizer-demo-app/frontend
-   - ghcr.io/stefanprodan/podinfo:6.0.0
-   HorizontalPodAutoscaler/kustomizer-demo-app/backend
-   HorizontalPodAutoscaler/kustomizer-demo-app/frontend
+$ kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION}
+Artifact: oci:// ghcr.io/stefanprodan/kustomizer-demo-app@sha256:98ebc5889a1031efe84d0d27cff4a235b9fadd5378781789b8e44cbf177424cd
+BuiltBy: kustomizer/v2.0.0
+CreatedAt: 2021-12-15T10:05:46Z
+Resources:
+- Namespace/kustomizer-demo-app
+- ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
+- Service/kustomizer-demo-app/backend
+- Service/kustomizer-demo-app/cache
+- Service/kustomizer-demo-app/frontend
+- Deployment/kustomizer-demo-app/backend
+  - ghcr.io/stefanprodan/podinfo:6.0.0
+- Deployment/kustomizer-demo-app/cache
+  - public.ecr.aws/docker/library/redis:6.2.0
+- Deployment/kustomizer-demo-app/frontend
+  - ghcr.io/stefanprodan/podinfo:6.0.0
+- HorizontalPodAutoscaler/kustomizer-demo-app/backend
+- HorizontalPodAutoscaler/kustomizer-demo-app/frontend
 ```
 
-To list only the container images referenced in the Kubernetes manifests:
+You can list the container images referenced in the Kubernetes manifests and
+scan them for vulnerabilities with Aqua Security [Trivy](https://github.com/aquasecurity/trivy):
 
 ```console
-$ kustomizer inspect artifact oci://ghcr.io/stefanprodan/kustomizer-demo-app:v1.0.0 --container-images
-ghcr.io/stefanprodan/podinfo:6.0.0
-public.ecr.aws/docker/library/redis:6.2.0
+kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+    --container-images | xargs -I {} sh -c "trivy image --severity=CRITICAL {}"
 ```
 
-## Install
+## Install the app
 
-Install the application using the config image:
+Install the application using the app config from the registry:
 
 ```console
-$ kustomizer apply --wait --prune \
-  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} \
-  --inventory-name kustomizer-demo-app \
-  --inventory-namespace default \
-  --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
+$ kustomizer apply inventory kustomizer-demo-app --wait --prune \
+  --artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+  --source ${CONFIG_IMAGE} \
   --revision ${CONFIG_VERSION}
 pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
 applying 10 manifest(s)...
@@ -218,12 +169,35 @@ all resources are ready
 List inventories:
 
 ```console
-$ kustomizer get inventories 
+$ kustomizer get inventories -n default
 NAME               	ENTRIES	SOURCE                                  	REVISION	LAST APPLIED         
 kustomizer-demo-app	10     	ghcr.io/stefanprodan/kustomizer-demo-app	v1.0.0  	2021-12-16T10:33:10Z
 ```
 
-## Publish updates
+Inspect the inventory to find the artifact digest:
+
+```console
+$ kustomizer inspect inv kustomizer-demo-app -n default
+Inventory: default/kustomizer-demo-app
+LastAppliedAt: 2021-12-20T23:05:45Z
+Source: oci://ghcr.io/stefanprodan/kustomizer-demo-app
+Revision: v1.0.0
+Artifacts:
+- oci://ghcr.io/stefanprodan/kustomizer-demo-app@sha256:d47a1734843b7144b6fb2f74d525abaaa63ca3ab8c0c82dc748acd541332df9f
+Resources:
+- Namespace/kustomizer-demo-app
+- ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
+- Service/kustomizer-demo-app/backend
+- Service/kustomizer-demo-app/cache
+- Service/kustomizer-demo-app/frontend
+- Deployment/kustomizer-demo-app/backend
+- Deployment/kustomizer-demo-app/cache
+- Deployment/kustomizer-demo-app/frontend
+- HorizontalPodAutoscaler/kustomizer-demo-app/backend
+- HorizontalPodAutoscaler/kustomizer-demo-app/frontend
+```
+
+## Publish app updates
 
 Bump the config version:
 
@@ -231,42 +205,44 @@ Bump the config version:
 export CONFIG_VERSION="1.0.1"
 ```
 
-Change the Redis container image tag:
+Change the Redis container image tag with [yq](https://github.com/mikefarah/yq):
 
 ```shell
-yq eval '.images[1].newTag="6.2.1"' --inplace ./testdata/oci/demo-app/kustomization.yaml
+yq eval '.images[1].newTag="6.2.1"' -i ./testdata/oci/demo-app/kustomization.yaml
 ```
 
 Push a new config image:
 
 ```shell
-kustomizer push artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}  -k ./testdata/oci/demo-app/ 
+kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+  -k ./testdata/oci/demo-app/ 
 ```
 
 Sign the new version:
 
 ```shell
-cosign sign --key cosign.key ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION}
+cosign sign --key cosign.key ${CONFIG_IMAGE}:${CONFIG_VERSION}
 ```
 
 Tag the config image as latest:
 
 ```shell
-kustomizer tag artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} latest
+kustomizer tag artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} latest
 ```
 
-## Upgrade
+## Upgrade the app
 
 Verify the latest version:
 
 ```shell
-cosign verify --key cosign.pub ghcr.io/${GITHUB_USER}/kustomizer-demo-app:latest
+cosign verify --key cosign.pub ${CONFIG_IMAGE}:latest
 ```
 
 Pull the latest config image and diff changes:
 
 ```console
-$ kustomizer pull artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app | kustomizer diff -i kustomizer-demo-app --prune -f-
+$ kustomizer diff inventory kustomizer-demo-app --prune \
+    --artifact oci://${CONFIG_IMAGE}:latest 
 ► Deployment/kustomizer-demo-app/cache drifted
 @@ -5,7 +5,7 @@
      deployment.kubernetes.io/revision: "1"
@@ -291,11 +267,9 @@ $ kustomizer pull artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app | ku
 Update the app on your cluster:
 
 ```console
-$ kustomizer apply --wait --prune \
-  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:latest \
-  --inventory-name kustomizer-demo-app \
-  --inventory-namespace default \
-  --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
+$ kustomizer apply inventory kustomizer-demo-app --wait --prune \
+  --artifact oci://${CONFIG_IMAGE}:latest \
+  --source ${CONFIG_IMAGE} \
   --revision ${CONFIG_VERSION}
 pulling ghcr.io/stefanprodan/kustomizer-demo-app:latest
 applying 10 manifest(s)...
@@ -318,11 +292,9 @@ all resources are ready
 Patch the app config using a Kustomize strategic merge patch and apply the changes:
 
 ```console
-$ kustomizer apply --wait --prune \
-  --artifact oci://ghcr.io/${GITHUB_USER}/kustomizer-demo-app:${CONFIG_VERSION} \
-  --inventory-name kustomizer-demo-app \
-  --inventory-namespace default \
-  --source ghcr.io/${GITHUB_USER}/kustomizer-demo-app \
+$ kustomizer apply inventory kustomizer-demo-app --wait --prune \
+  --artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+  --source ${CONFIG_IMAGE} \
   --revision ${CONFIG_VERSION} \
   --patch ./testdata/patches/safe-to-evict.yaml
 pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.1
@@ -341,12 +313,12 @@ waiting for resources to become ready...
 all resources are ready
 ```
 
-## Uninstall
+## Uninstall the app
 
 Delete the app from your cluster:
 
 ```console
-$ kustomizer delete -i kustomizer-demo-app
+$ kustomizer delete inventory kustomizer-demo-app
 retrieving inventory...
 deleting 10 manifest(s)...
 HorizontalPodAutoscaler/kustomizer-demo-app/frontend deleted
