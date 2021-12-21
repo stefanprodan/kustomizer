@@ -32,6 +32,9 @@ It generates an inventory which keeps track of the set of resources applied toge
 The inventory is stored inside the cluster in a `ConfigMap` object and contains metadata
 such as the resources provenance and revision.
 
+The Kustomizer garbage collector uses the inventory to keep track of the applied resources
+and prunes the Kubernetes objects that were previously applied but are missing from the current revision.
+
 You specify an inventory name and namespace at apply time, and then you can use Kustomizer to
 list, diff, update, and delete inventories:
 
@@ -41,8 +44,7 @@ list, diff, update, and delete inventories:
 - `kustomizer inspect inventory <name> --namespace <namespace>`
 - `kustomizer delete inventory <name> --namespace <namespace>`
 
-The Kustomizer garbage collector uses the inventory to keep track of the applied resources
-and prunes the Kubernetes objects that were previously applied but are missing from the current revision.
+To connect to Kubernetes API, Kustomizer uses the current context from `~/.kube/config`.
 
 ## Comparison with other tools
 
@@ -83,3 +85,8 @@ replacing kubectl with kustomizer, would smooth the transition to a continuous d
 
 At times, Kustomizer servers as a testing bench for experimental features that are proposed to the Flux community.
 For example, Kustomizer is the project where features like staged-apply, garbage collection and diffing where first introduced.
+
+## License
+
+Kustomizer is [Apache 2.0 licensed](https://github.com/stefanprodan/kustomizer/blob/main/LICENSE)
+and accepts contributions via GitHub pull requests.
