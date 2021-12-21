@@ -19,13 +19,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"io"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var getInventories = &cobra.Command{
@@ -43,7 +43,16 @@ var getInventories = &cobra.Command{
 	RunE: runGetInventoriesCmd,
 }
 
+type getInventoriesFlags struct {
+	allNamespaces bool
+}
+
+var getInventoriesArgs getInventoriesFlags
+
 func init() {
+	getInventories.Flags().BoolVar(&getInventoriesArgs.allNamespaces, "all-namespaces", false,
+		"list the requested object(s) across all namespaces.")
+
 	getCmd.AddCommand(getInventories)
 }
 
@@ -73,40 +82,31 @@ func runGetInventoriesCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	list := &corev1.ConfigMapList{}
-	err = resMgr.Client().List(ctx, list, client.InNamespace(*kubeconfigArgs.Namespace), invStorage.GetOwnerLabels())
+	ns := *kubeconfigArgs.Namespace
+	if getInventoriesArgs.allNamespaces {
+		ns = ""
+	}
+	inventories, err := invStorage.ListInventories(ctx, ns)
 	if err != nil {
 		return err
 	}
 
 	var rows [][]string
-	for _, cm := range list.Items {
-		if len(args) > 0 {
-			if name := args[0]; name != "" && cm.Name != inventory.InventoryPrefix+name {
-				continue
-			}
+	for _, inv := range inventories {
+		row := []string{}
+		if getInventoriesArgs.allNamespaces {
+			row = []string{inv.Name, inv.Namespace, fmt.Sprintf("%v", len(inv.Resources)), inv.Source, inv.Revision, inv.LastAppliedAt}
+		} else {
+			row = []string{inv.Name, fmt.Sprintf("%v", len(inv.Resources)), inv.Source, inv.Revision, inv.LastAppliedAt}
 		}
-		var ts string
-		var source string
-		var rev string
-		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/last-applied-time"]; ok {
-			ts = s
-		}
-		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/source"]; ok {
-			source = s
-		}
-		if s, ok := cm.GetAnnotations()["inventory.kustomizer.dev/revision"]; ok {
-			rev = s
-		}
-		i := inventory.NewInventory(cm.GetName(), cm.GetNamespace())
-		if err := invStorage.GetInventory(ctx, i); err != nil {
-			return err
-		}
-		row := []string{i.Name, fmt.Sprintf("%v", len(i.Entries)), source, rev, ts}
 		rows = append(rows, row)
 	}
 
-	printTable(rootCmd.OutOrStdout(), []string{"name", "entries", "source", "revision", "last applied"}, rows)
+	if getInventoriesArgs.allNamespaces {
+		printTable(rootCmd.OutOrStdout(), []string{"name", "namespace", "entries", "source", "revision", "last applied"}, rows)
+	} else {
+		printTable(rootCmd.OutOrStdout(), []string{"name", "entries", "source", "revision", "last applied"}, rows)
+	}
 
 	return nil
 }

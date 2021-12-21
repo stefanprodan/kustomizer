@@ -26,7 +26,8 @@ import (
 )
 
 func Pull(ctx context.Context, url string) (string, *Metadata, error) {
-	if _, err := name.ParseReference(url); err != nil {
+	ref, err := name.ParseReference(url)
+	if err != nil {
 		return "", nil, fmt.Errorf("parsing refernce failed: %w", err)
 	}
 
@@ -40,10 +41,16 @@ func Pull(ctx context.Context, url string) (string, *Metadata, error) {
 		return "", nil, err
 	}
 
+	digest, err := img.Digest()
+	if err != nil {
+		return "", nil, fmt.Errorf("parsing digest failed: %w", err)
+	}
+
 	meta, err := GetMetadata(manifest.Annotations)
 	if err != nil {
 		return "", nil, err
 	}
+	meta.Digest = ref.Context().Digest(digest.String()).String()
 
 	layers, err := img.Layers()
 	if err != nil {

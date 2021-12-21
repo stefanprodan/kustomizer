@@ -93,7 +93,7 @@ func runBuildInventoryCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	objects, err := buildManifests(ctx, buildInventoryArgs.kustomize, buildInventoryArgs.filename, buildInventoryArgs.artifact, buildInventoryArgs.patch)
+	objects, _, err := buildManifests(ctx, buildInventoryArgs.kustomize, buildInventoryArgs.filename, buildInventoryArgs.artifact, buildInventoryArgs.patch)
 	if err != nil {
 		return err
 	}
@@ -120,17 +120,18 @@ func runBuildInventoryCmd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildManifests(ctx context.Context, kustomizePath string, filePaths []string, artifacts []string, patchPaths []string) ([]*unstructured.Unstructured, error) {
+func buildManifests(ctx context.Context, kustomizePath string, filePaths []string, artifacts []string, patchPaths []string) ([]*unstructured.Unstructured, []string, error) {
 	objects := make([]*unstructured.Unstructured, 0)
+	digests := []string{}
 	if kustomizePath != "" {
 		data, err := buildKustomization(kustomizePath)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		objs, err := ssa.ReadObjects(bytes.NewReader(data))
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", kustomizePath, err)
+			return nil, nil, fmt.Errorf("%s: %w", kustomizePath, err)
 		}
 		objects = append(objects, objs...)
 	}
@@ -138,18 +139,18 @@ func buildManifests(ctx context.Context, kustomizePath string, filePaths []strin
 	if len(filePaths) > 0 {
 		manifests, err := scanForManifests(filePaths)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, manifest := range manifests {
 			ms, err := os.Open(manifest)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			objs, err := ssa.ReadObjects(bufio.NewReader(ms))
 			ms.Close()
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", manifest, err)
+				return nil, nil, fmt.Errorf("%s: %w", manifest, err)
 			}
 
 			for _, obj := range objs {
@@ -164,17 +165,19 @@ func buildManifests(ctx context.Context, kustomizePath string, filePaths []strin
 		for _, ociURL := range artifacts {
 			url, err := registry.ParseURL(ociURL)
 			if err != nil {
-				return nil, fmt.Errorf("parsing %s failed: %w", ociURL, err)
+				return nil, nil, fmt.Errorf("parsing %s failed: %w", ociURL, err)
 			}
 
-			yml, _, err := registry.Pull(ctx, url)
+			yml, meta, err := registry.Pull(ctx, url)
 			if err != nil {
-				return nil, fmt.Errorf("pulling %s failed: %w", ociURL, err)
+				return nil, nil, fmt.Errorf("pulling %s failed: %w", ociURL, err)
 			}
+
+			digests = append(digests, meta.Digest)
 
 			objs, err := ssa.ReadObjects(strings.NewReader(yml))
 			if err != nil {
-				return nil, fmt.Errorf("extracting manifests from %s failed: %w", ociURL, err)
+				return nil, nil, fmt.Errorf("extracting manifests from %s failed: %w", ociURL, err)
 			}
 			objects = append(objects, objs...)
 		}
@@ -184,18 +187,18 @@ func buildManifests(ctx context.Context, kustomizePath string, filePaths []strin
 		for _, patchPath := range patchPaths {
 			data, err := applyPatches(patchPath, objects)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			objs, err := ssa.ReadObjects(bytes.NewReader(data))
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", kustomizePath, err)
+				return nil, nil, fmt.Errorf("%s: %w", kustomizePath, err)
 			}
 			objects = objs
 		}
 	}
 
-	return objects, nil
+	return objects, digests, nil
 }
 
 func scanForManifests(paths []string) ([]string, error) {

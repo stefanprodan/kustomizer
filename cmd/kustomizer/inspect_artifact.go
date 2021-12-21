@@ -94,15 +94,16 @@ func runInspectArtifactCmd(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	rootCmd.Println("Built by:", fmt.Sprintf("kustomizer v%s", meta.Version))
-	rootCmd.Println("Created at:", meta.Created)
+	rootCmd.Println("Artifact: oci://", meta.Digest)
+	rootCmd.Println("BuiltBy:", fmt.Sprintf("kustomizer/v%s", meta.Version))
+	rootCmd.Println("CreatedAt:", meta.Created)
 	rootCmd.Println("Checksum:", meta.Checksum)
-	rootCmd.Println("Manifests:")
+	rootCmd.Println("Resources:")
 	for _, object := range objects {
-		rootCmd.Println("  ", ssa.FmtUnstructured(object))
+		rootCmd.Println("-", ssa.FmtUnstructured(object))
 		images := getContainerImages(object)
 		for _, image := range images {
-			rootCmd.Println("   -", image)
+			rootCmd.Println("  -", image)
 		}
 	}
 
@@ -130,10 +131,10 @@ func getContainerImages(object *unstructured.Unstructured) []string {
 	}
 
 	// cron job
-	if cs, ok, _ := unstructured.NestedSlice(object.Object, "spec", "jobTemplate", "spec", "containers"); ok {
+	if cs, ok, _ := unstructured.NestedSlice(object.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers"); ok {
 		containers = append(containers, cs...)
 	}
-	if cs, ok, _ := unstructured.NestedSlice(object.Object, "spec", "jobTemplate", "spec", "initContainers"); ok {
+	if cs, ok, _ := unstructured.NestedSlice(object.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers"); ok {
 		containers = append(containers, cs...)
 	}
 

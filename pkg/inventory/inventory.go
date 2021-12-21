@@ -17,10 +17,9 @@ limitations under the License.
 package inventory
 
 import (
-	"github.com/fluxcd/pkg/ssa"
 	"sort"
-	"strings"
 
+	"github.com/fluxcd/pkg/ssa"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
@@ -28,25 +27,30 @@ import (
 
 // Inventory is a record of objects that are applied on a cluster stored as a configmap.
 type Inventory struct {
-	// Name of the inventory configmap.
+	// Name of the inventory.
 	Name string `json:"name"`
 
-	// Namespace of the inventory configmap.
+	// Namespace of the inventory.
 	Namespace string `json:"namespace"`
 
-	// Source is the URL of the source code.
+	// Source is the repository URL.
 	Source string `json:"source,omitempty"`
 
-	// Revision is the Source control revision identifier.
+	// Revision is the source revision identifier.
 	Revision string `json:"revision,omitempty"`
 
-	// Entries of Kubernetes objects metadata.
-	Entries []Entry `json:"entries"`
+	// LastAppliedAt is the timestamp (UTC RFC3339) of the last successful apply.
+	LastAppliedAt string `json:"lastAppliedTime,omitempty"`
+
+	// Resources is the list of Kubernetes object IDs.
+	Resources []Resource `json:"resources"`
+
+	// Artifacts is the list of the OCI URLs.
+	Artifacts []string `json:"artifacts"`
 }
 
-// Entry contains the information necessary to locate the
-// resource within a cluster.
-type Entry struct {
+// Resource contains the information necessary to locate the Kubernetes object.
+type Resource struct {
 	// ObjectID is the string representation of object.ObjMetadata,
 	// in the format '<namespace>_<name>_<group>_<kind>'.
 	ObjectID string `json:"id"`
@@ -57,16 +61,17 @@ type Entry struct {
 
 func NewInventory(name, namespace string) *Inventory {
 	return &Inventory{
-		Name:      strings.TrimPrefix(name, InventoryPrefix),
+		Name:      name,
 		Namespace: namespace,
-		Entries:   []Entry{},
+		Resources: []Resource{},
 	}
 }
 
 // SetSource sets the source url and revision for this inventory.
-func (inv *Inventory) SetSource(url, revision string) {
+func (inv *Inventory) SetSource(url, revision string, artifacts []string) {
 	inv.Source = url
 	inv.Revision = revision
+	inv.Artifacts = artifacts
 }
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.
@@ -83,7 +88,7 @@ func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
 			return err
 		}
 
-		inv.Entries = append(inv.Entries, Entry{
+		inv.Resources = append(inv.Resources, Resource{
 			ObjectID:      objMetadata.String(),
 			ObjectVersion: gv.Version,
 		})
@@ -94,7 +99,7 @@ func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
 
 // VersionOf returns the API version of the given object if found in this inventory.
 func (inv *Inventory) VersionOf(objMetadata object.ObjMetadata) string {
-	for _, entry := range inv.Entries {
+	for _, entry := range inv.Resources {
 		if entry.ObjectID == objMetadata.String() {
 			return entry.ObjectVersion
 		}
@@ -106,7 +111,7 @@ func (inv *Inventory) VersionOf(objMetadata object.ObjMetadata) string {
 func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 	objects := make([]*unstructured.Unstructured, 0)
 
-	for _, entry := range inv.Entries {
+	for _, entry := range inv.Resources {
 		objMetadata, err := object.ParseObjMetadata(entry.ObjectID)
 		if err != nil {
 			return nil, err
@@ -130,7 +135,7 @@ func (inv *Inventory) ListObjects() ([]*unstructured.Unstructured, error) {
 // ListMeta returns the inventory entries as object.ObjMetadata objects.
 func (inv *Inventory) ListMeta() (object.ObjMetadataSet, error) {
 	var metas []object.ObjMetadata
-	for _, e := range inv.Entries {
+	for _, e := range inv.Resources {
 		m, err := object.ParseObjMetadata(e.ObjectID)
 		if err != nil {
 			return metas, err

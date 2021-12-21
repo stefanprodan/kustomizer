@@ -89,7 +89,7 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rootArgs.timeout)
 	defer cancel()
 
-	objects, err := buildManifests(ctx, diffInventoryArgs.kustomize, diffInventoryArgs.filename, diffInventoryArgs.artifact, diffInventoryArgs.patch)
+	objects, _, err := buildManifests(ctx, diffInventoryArgs.kustomize, diffInventoryArgs.filename, diffInventoryArgs.artifact, diffInventoryArgs.patch)
 	if err != nil {
 		return err
 	}

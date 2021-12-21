@@ -50,15 +50,16 @@ var applyInventoryCmd = &cobra.Command{
 }
 
 type applyInventoryFlags struct {
-	artifact  []string
-	filename  []string
-	kustomize string
-	patch     []string
-	wait      bool
-	force     bool
-	prune     bool
-	source    string
-	revision  string
+	artifact        []string
+	filename        []string
+	kustomize       string
+	patch           []string
+	wait            bool
+	force           bool
+	prune           bool
+	source          string
+	revision        string
+	createNamespace bool
 }
 
 var applyInventoryArgs applyInventoryFlags
@@ -77,7 +78,7 @@ func init() {
 	applyInventoryCmd.Flags().BoolVar(&applyInventoryArgs.prune, "prune", false, "Delete stale objects from the cluster.")
 	applyInventoryCmd.Flags().StringVar(&applyInventoryArgs.source, "source", "", "The URL to the source code.")
 	applyInventoryCmd.Flags().StringVar(&applyInventoryArgs.revision, "revision", "", "The revision identifier.")
-
+	applyInventoryCmd.Flags().BoolVar(&applyInventoryArgs.createNamespace, "create-namespace", false, "Create the inventory namespace if not present.")
 	applyCmd.AddCommand(applyInventoryCmd)
 }
 
@@ -95,13 +96,13 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	logger.Println("building inventory...")
-	objects, err := buildManifests(ctx, applyInventoryArgs.kustomize, applyInventoryArgs.filename, applyInventoryArgs.artifact, applyInventoryArgs.patch)
+	objects, digests, err := buildManifests(ctx, applyInventoryArgs.kustomize, applyInventoryArgs.filename, applyInventoryArgs.artifact, applyInventoryArgs.patch)
 	if err != nil {
 		return err
 	}
 
 	newInventory := inventory.NewInventory(name, *kubeconfigArgs.Namespace)
-	newInventory.SetSource(applyInventoryArgs.source, applyInventoryArgs.revision)
+	newInventory.SetSource(applyInventoryArgs.source, applyInventoryArgs.revision, digests)
 	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
@@ -177,7 +178,7 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("inventory query failed, error: %w", err)
 	}
 
-	err = invStorage.ApplyInventory(ctx, newInventory)
+	err = invStorage.ApplyInventory(ctx, newInventory, applyInventoryArgs.createNamespace)
 	if err != nil {
 		return fmt.Errorf("inventory apply failed, error: %w", err)
 	}

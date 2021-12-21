@@ -66,6 +66,6 @@ func TestInspect(t *testing.T) {
 
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
-		g.Expect(output).To(BeEmpty())
+		g.Expect(output).To(MatchRegexp("podinfo"))
 	})
 }
