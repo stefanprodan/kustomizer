@@ -44,6 +44,9 @@ type Inventory struct {
 
 	// Resources is the list of Kubernetes object IDs.
 	Resources []Resource `json:"resources"`
+
+	// Artifacts is the list of the OCI URLs.
+	Artifacts []string `json:"artifacts"`
 }
 
 // Resource contains the information necessary to locate the Kubernetes object.
@@ -65,9 +68,10 @@ func NewInventory(name, namespace string) *Inventory {
 }
 
 // SetSource sets the source url and revision for this inventory.
-func (inv *Inventory) SetSource(url, revision string) {
+func (inv *Inventory) SetSource(url, revision string, artifacts []string) {
 	inv.Source = url
 	inv.Revision = revision
+	inv.Artifacts = artifacts
 }
 
 // AddObjects extracts the metadata from the given objects and adds it to the inventory.

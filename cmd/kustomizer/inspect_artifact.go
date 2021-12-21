@@ -100,10 +100,10 @@ func runInspectArtifactCmd(cmd *cobra.Command, args []string) error {
 	rootCmd.Println("Checksum:", meta.Checksum)
 	rootCmd.Println("Resources:")
 	for _, object := range objects {
-		rootCmd.Println("  ", ssa.FmtUnstructured(object))
+		rootCmd.Println("-", ssa.FmtUnstructured(object))
 		images := getContainerImages(object)
 		for _, image := range images {
-			rootCmd.Println("   -", image)
+			rootCmd.Println("  -", image)
 		}
 	}
 

@@ -168,7 +168,7 @@ func TestApplyArtifact(t *testing.T) {
 	dir, err := makeTestDir(id, testManifests(id, id, false))
 	g.Expect(err).NotTo(HaveOccurred())
 
-	t.Run("push artifact", func(t *testing.T) {
+	t.Run("pushes artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
 			"push artifact %s -k %s",
 			artifact,
@@ -180,7 +180,7 @@ func TestApplyArtifact(t *testing.T) {
 		g.Expect(output).To(MatchRegexp(id))
 	})
 
-	t.Run("apply artifact", func(t *testing.T) {
+	t.Run("applies artifact", func(t *testing.T) {
 		output, err := executeCommand(fmt.Sprintf(
 			"apply inv %s -n %s -a %s",
 			id,
@@ -204,5 +204,17 @@ func TestApplyArtifact(t *testing.T) {
 
 		g.Expect(configMap.GetLabels()).To(HaveKeyWithValue("inventory.kustomizer.dev/name", id))
 		g.Expect(configMap.GetLabels()).To(HaveKeyWithValue("inventory.kustomizer.dev/namespace", id))
+	})
+
+	t.Run("sets artifact in inventory", func(t *testing.T) {
+		output, err := executeCommand(fmt.Sprintf(
+			"inspect inv %s -n %s ",
+			id,
+			id,
+		))
+
+		g.Expect(err).NotTo(HaveOccurred())
+		t.Logf("\n%s", output)
+		g.Expect(output).To(MatchRegexp(registryHost))
 	})
 }

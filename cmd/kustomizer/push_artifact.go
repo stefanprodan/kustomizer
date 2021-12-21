@@ -87,7 +87,7 @@ func runPushArtifactCmd(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	logger.Println("building manifests...")
-	objects, err := buildManifests(ctx, pushArtifactArgs.kustomize, pushArtifactArgs.filename, nil, pushArtifactArgs.patch)
+	objects, _, err := buildManifests(ctx, pushArtifactArgs.kustomize, pushArtifactArgs.filename, nil, pushArtifactArgs.patch)
 	if err != nil {
 		return err
 	}

@@ -47,7 +47,7 @@ type Storage struct {
 
 // ApplyInventory creates or updates the storage object for the given inventory.
 func (s *Storage) ApplyInventory(ctx context.Context, i *Inventory, createNamespace bool) error {
-	data, err := json.Marshal(i.Resources)
+	resources, err := json.Marshal(i.Resources)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,15 @@ func (s *Storage) ApplyInventory(ctx context.Context, i *Inventory, createNamesp
 	cm.Annotations = s.metaToAnnotations(i)
 
 	cm.Data = map[string]string{
-		KindName: string(data),
+		"resources": string(resources),
+	}
+
+	if len(i.Artifacts) > 0 {
+		artifacts, err := json.Marshal(i.Artifacts)
+		if err != nil {
+			return err
+		}
+		cm.Data["artifacts"] = string(artifacts)
 	}
 
 	opts := []client.PatchOption{
@@ -82,19 +90,26 @@ func (s *Storage) GetInventory(ctx context.Context, i *Inventory) error {
 		return err
 	}
 
-	if _, ok := cm.Data[KindName]; !ok {
-		return fmt.Errorf("inventory data not found in ConfigMap/%s", cmKey)
-	}
-
 	s.metaFromAnnotations(i, cm.GetAnnotations())
 
+	if _, ok := cm.Data["resources"]; !ok {
+		return fmt.Errorf("inventory data not found in ConfigMap/%s", cmKey)
+	}
 	var entries []Resource
-	err = json.Unmarshal([]byte(cm.Data[KindName]), &entries)
+	err = json.Unmarshal([]byte(cm.Data["resources"]), &entries)
 	if err != nil {
 		return err
 	}
-
 	i.Resources = entries
+
+	if artifacts, ok := cm.Data["artifacts"]; ok {
+		var list []string
+		err = json.Unmarshal([]byte(artifacts), &list)
+		if err != nil {
+			return err
+		}
+		i.Artifacts = list
+	}
 
 	return nil
 }

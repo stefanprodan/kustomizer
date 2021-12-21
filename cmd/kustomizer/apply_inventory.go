@@ -96,13 +96,13 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	logger.Println("building inventory...")
-	objects, err := buildManifests(ctx, applyInventoryArgs.kustomize, applyInventoryArgs.filename, applyInventoryArgs.artifact, applyInventoryArgs.patch)
+	objects, digests, err := buildManifests(ctx, applyInventoryArgs.kustomize, applyInventoryArgs.filename, applyInventoryArgs.artifact, applyInventoryArgs.patch)
 	if err != nil {
 		return err
 	}
 
 	newInventory := inventory.NewInventory(name, *kubeconfigArgs.Namespace)
-	newInventory.SetSource(applyInventoryArgs.source, applyInventoryArgs.revision)
+	newInventory.SetSource(applyInventoryArgs.source, applyInventoryArgs.revision, digests)
 	if err := newInventory.AddObjects(objects); err != nil {
 		return fmt.Errorf("creating inventory failed, error: %w", err)
 	}
