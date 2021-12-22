@@ -3,6 +3,16 @@
 The Kustomizer CLI is available as a binary executable for all major platforms,
 the binaries can be downloaded form GitHub [release page](https://github.com/stefanprodan/kustomizer/releases).
 
+=== "Install with brew"
+
+    Install the latest release on macOS or Linux with:
+    
+    ```shell
+    brew install stefanprodan/tap/kustomizer
+    ```
+
+    Note that the Homebrew formula will setup shell autocompletion for Bash, Fish and ZSH.
+
 === "Install with curl"
 
     Install the latest release on macOS or Linux with:
@@ -11,7 +21,7 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
     curl -s https://kustomizer.dev/install.sh | sudo bash
     ```
 
-    The install script downloads the latest release from GitHub and copies the kustomizer binary to `/usr/local/bin`.    
+    The install script downloads the latest release from GitHub and copies the kustomizer binary to `/usr/local/bin`.
     If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
     of the release using the public key from [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
 
@@ -40,6 +50,13 @@ Configure your shell to load kustomizer completions:
     ```shell
     # ~/.bashrc or ~/.profile
     command -v kustomizer >/dev/null && . <(kustomizer completion bash)
+    ```
+
+    If you have an alias for kustomizer, you can extend shell completion to work with that alias:
+
+    ```shell
+    echo 'alias kz=kustomizer' >>~/.bashrc
+    echo 'complete -F __start_kustomizer kz' >>~/.bashrc
     ```
 
 === "fish"
@@ -104,42 +121,67 @@ Configure your shell to load kustomizer completions:
 In order to change settings such as the server-side apply field manager or the apply order,
 first create a config file at `~/.kustomizer/config` with:
 
-```console
-$ kustomizer config init
-config written to /Users/me/.kustomizer/config
-```
+=== "command"
+
+    ```shell
+    kustomizer config init
+    ```
+
+=== "example output"
+
+    ```console
+    config written to /Users/stefanprodan/.kustomizer/config
+    ```
 
 Make adjustments to the config YAML, then validate the config with:
 
-```console
-$ kustomizer config view
+=== "command"
+    
+    ```shell
+    kustomizer config view
+    ```
+
+=== "example output"
+
+    ```yaml
+    apiVersion: kustomizer.dev/v1
+    kind: Config
+    applyOrder:
+      first:
+      - CustomResourceDefinition
+      - Namespace
+      - ResourceQuota
+      - StorageClass
+      - ServiceAccount
+      - PodSecurityPolicy
+      - Role
+      - ClusterRole
+      - RoleBinding
+      - ClusterRoleBinding
+      - ConfigMap
+      - Secret
+      - Service
+      - LimitRange
+      - PriorityClass
+      - Deployment
+      - StatefulSet
+      - CronJob
+      - PodDisruptionBudget
+      last:
+      - MutatingWebhookConfiguration
+      - ValidatingWebhookConfiguration
+    fieldManager:
+      group: inventory.kustomizer.dev
+      name: kustomizer
+    ```
+
+If you want to use Kustomizer as a debug tool for Flux, you can set the field manager
+to match Flux's [kustomize-controller](https://github.com/fluxcd/kustomize-controller) with:
+
+```yaml
 apiVersion: kustomizer.dev/v1
 kind: Config
-applyOrder:
-  first:
-  - CustomResourceDefinition
-  - Namespace
-  - ResourceQuota
-  - StorageClass
-  - ServiceAccount
-  - PodSecurityPolicy
-  - Role
-  - ClusterRole
-  - RoleBinding
-  - ClusterRoleBinding
-  - ConfigMap
-  - Secret
-  - Service
-  - LimitRange
-  - PriorityClass
-  - Deployment
-  - StatefulSet
-  - CronJob
-  - PodDisruptionBudget
-  last:
-  - MutatingWebhookConfiguration
-  - ValidatingWebhookConfiguration
 fieldManager:
-  group: inventory.kustomizer.dev
-  name: kustomizer
+  group: kustomize.toolkit.fluxcd.io
+  name: kustomize-controller
 ```
