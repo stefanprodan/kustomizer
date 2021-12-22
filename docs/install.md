@@ -3,52 +3,185 @@
 The Kustomizer CLI is available as a binary executable for all major platforms,
 the binaries can be downloaded form GitHub [release page](https://github.com/stefanprodan/kustomizer/releases).
 
-## Install with curl
+=== "Install with brew"
 
-Install the latest release on macOS or Linux with:
+    Install the latest release on macOS or Linux with:
+    
+    ```shell
+    brew install stefanprodan/tap/kustomizer
+    ```
 
-```bash
-curl -s https://kustomizer.dev/install.sh | sudo bash
-```
+    Note that the Homebrew formula will setup shell autocompletion for Bash, Fish and ZSH.
 
-If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
-of the release using the public key from [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
+=== "Install with curl"
 
-The install script does the following:
+    Install the latest release on macOS or Linux with:
+    
+    ```shell
+    curl -s https://kustomizer.dev/install.sh | sudo bash
+    ```
 
-- attempts to detect your OS 
-- downloads the [release tar file](https://github.com/stefanprodan/kustomizer/releases) and its signature in a temporary directory 
-- verifies the signature with cosign 
-- unpacks the release tar file 
-- verifies the binary checksum 
-- copies the kustomizer binary to `/usr/local/bin`
-- removes the temporary directory
+    The install script downloads the latest release from GitHub and copies the kustomizer binary to `/usr/local/bin`.
+    If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
+    of the release using the public key from [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
 
-## Install from source
+=== "Install from source"
 
-Using Go >= 1.17:
+    Using Go >= 1.17:
+    
+    ```shell
+    go install github.com/stefanprodan/kustomizer/cmd/kustomizer@latest
+    ```
 
-```sh
-go install github.com/stefanprodan/kustomizer/cmd/kustomizer@latest
-```
+## Shell autocompletion
 
-## Build from source
+Configure your shell to load kustomizer completions:
 
-Clone the repository:
+=== "bash"
 
-```bash
-git clone https://github.com/stefanprodan/kustomizer
-cd kustomizer
-```
+    To load completion run:
+    
+    ```shell
+    . <(kustomizer completion bash)
+    ```
 
-Build the kustomizer binary (requires go >= 1.17):
+    To configure your bash shell to load completions for each session add to your bashrc:
 
-```bash
-make build
-```
+    ```shell
+    # ~/.bashrc or ~/.profile
+    command -v kustomizer >/dev/null && . <(kustomizer completion bash)
+    ```
 
-Run the binary:
+    If you have an alias for kustomizer, you can extend shell completion to work with that alias:
 
-```bash
-./bin/kustomizer -h
+    ```shell
+    echo 'alias kz=kustomizer' >>~/.bashrc
+    echo 'complete -F __start_kustomizer kz' >>~/.bashrc
+    ```
+
+=== "fish"
+
+    To configure your fish shell to [load completions](http://fishshell.com/docs/current/index.html#completion-own)
+    for each session write this script to your completions dir:
+    
+    ```shell
+    kustomizer completion fish > ~/.config/fish/completions/kustomizer.fish
+    ```
+
+=== "powershell"
+
+    To load completion run:
+
+    ```shell
+    . <(kustomizer completion powershell)
+    ```
+
+    To configure your powershell shell to load completions for each session add to your powershell profile:
+    
+    Windows:
+
+    ```shell
+    cd "$env:USERPROFILE\Documents\WindowsPowerShell\Modules"
+    kustomizer completion >> kustomizer-completion.ps1
+    ```
+    Linux:
+
+    ```shell
+    cd "${XDG_CONFIG_HOME:-"$HOME/.config/"}/powershell/modules"
+    kustomizer completion >> kustomizer-completions.ps1
+    ```
+
+=== "zsh"
+
+    To load completion run:
+    
+    ```shell
+    . <(kustomizer completion zsh) && compdef _kustomizer kustomizer
+    ```
+
+    To configure your zsh shell to load completions for each session add to your zshrc:
+    
+    ```shell
+    # ~/.zshrc or ~/.profile
+    command -v kustomizer >/dev/null && . <(kustomizer completion zsh) && compdef _kustomizer kustomizer
+    ```
+
+    or write a cached file in one of the completion directories in your ${fpath}:
+    
+    ```shell
+    echo "${fpath// /\n}" | grep -i completion
+    kustomizer completion zsh > _kustomizer
+    
+    mv _kustomizer ~/.oh-my-zsh/completions  # oh-my-zsh
+    mv _kustomizer ~/.zprezto/modules/completion/external/src/  # zprezto
+    ```
+
+## Configuration
+
+In order to change settings such as the server-side apply field manager or the apply order,
+first create a config file at `~/.kustomizer/config` with:
+
+=== "command"
+
+    ```shell
+    kustomizer config init
+    ```
+
+=== "example output"
+
+    ```console
+    config written to /Users/stefanprodan/.kustomizer/config
+    ```
+
+Make adjustments to the config YAML, then validate the config with:
+
+=== "command"
+    
+    ```shell
+    kustomizer config view
+    ```
+
+=== "example output"
+
+    ```yaml
+    apiVersion: kustomizer.dev/v1
+    kind: Config
+    applyOrder:
+      first:
+      - CustomResourceDefinition
+      - Namespace
+      - ResourceQuota
+      - StorageClass
+      - ServiceAccount
+      - PodSecurityPolicy
+      - Role
+      - ClusterRole
+      - RoleBinding
+      - ClusterRoleBinding
+      - ConfigMap
+      - Secret
+      - Service
+      - LimitRange
+      - PriorityClass
+      - Deployment
+      - StatefulSet
+      - CronJob
+      - PodDisruptionBudget
+      last:
+      - MutatingWebhookConfiguration
+      - ValidatingWebhookConfiguration
+    fieldManager:
+      group: inventory.kustomizer.dev
+      name: kustomizer
+    ```
+
+If you want to use Kustomizer as a debug tool for Flux, you can set the field manager
+to match Flux's [kustomize-controller](https://github.com/fluxcd/kustomize-controller) with:
+
+```yaml
+apiVersion: kustomizer.dev/v1
+kind: Config
+fieldManager:
+  group: kustomize.toolkit.fluxcd.io
+  name: kustomize-controller
 ```

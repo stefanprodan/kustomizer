@@ -26,17 +26,19 @@ markdown_extensions:
   - admonition
   - meta
   - codehilite
-  - pymdownx.tabbed
   - pymdownx.tilde
   - pymdownx.progressbar
   - pymdownx.tasklist
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
 
 nav:
   - Introduction: index.md
   - Get Started: get-started.md
-  - Install: install.md
+  - Get Started with OCI: get-started-oci.md
   - GitHub Actions: github-actions.md
+  - Install: install.md
   - Command Reference:
       - Artifact:
           - Push: cmd/kustomizer_push_artifact.md

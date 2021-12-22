@@ -13,11 +13,7 @@ curl -s https://kustomizer.dev/install.sh | sudo bash
 
 For other installation methods, see the CLI [install documentation](install.md).
 
-To connect to Kubernetes API, Kustomizer uses the current context from `~/.kube/config`.
-You can set a different context with the `--context` flag.
-You can also specify a different kubeconfig with `--kubeconfig` or with the `KUBECONFIG` env var.
-
-## Clone the git repository
+## Clone the demo app repository
 
 Clone the Kustomizer Git repository locally:
 
@@ -26,131 +22,192 @@ git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
-## Create resources
+You'll be using a sample web application composed of two [podinfo](https://github.com/stefanprodan/podinfo)
+instances called `frontend` and `backend`, and a redis instance called `cache`.
+The web application's Kubernetes configuration is located at `./examples/demo-app`.
 
-Apply a local directory that contains Kubernetes manifests:
+## Build the demo app config
+
+Build the demo application to see its Kubernetes configuration:
+
+```shell
+kustomizer build inventory demo-app -k ./examples/demo-app -o yaml
+```
+
+You can validate the build command output with static analysis tools such as
+[kubeval](https://github.com/instrumenta/kubeval) or [kubeconform](https://github.com/yannh/kubeconform):
 
 ```console
-$ kustomizer apply -f ./testdata/plain --prune --wait \
-    --source="$(git ls-remote --get-url)" \
-    --revision="$(git describe --always)" \
-    --inventory-name=demo \
-    --inventory-namespace=default
+$ kustomizer build inventory demo-app -k ./examples/demo-app | kubeval
+PASS - stdin contains a valid Namespace (kustomizer-demo-app)
+PASS - stdin contains a valid ConfigMap (kustomizer-demo-app.redis-config-bd2fcfgt6k)
+PASS - stdin contains a valid Service (kustomizer-demo-app.backend)
+PASS - stdin contains a valid Service (kustomizer-demo-app.cache)
+PASS - stdin contains a valid Service (kustomizer-demo-app.frontend)
+PASS - stdin contains a valid Deployment (kustomizer-demo-app.backend)
+PASS - stdin contains a valid Deployment (kustomizer-demo-app.cache)
+PASS - stdin contains a valid Deployment (kustomizer-demo-app.frontend)
+PASS - stdin contains a valid HorizontalPodAutoscaler (kustomizer-demo-app.backend)
+PASS - stdin contains a valid HorizontalPodAutoscaler (kustomizer-demo-app.frontend)
+```
 
+!!! info "OCI artifacts"
+
+    Kustomizer offers a way to distribute Kubernetes configuration using container registries.
+    Instead of using the local overlay, you can build the same resources from an OCI artifact
+    hosted on GitHub Container Registry:
+    
+    ```shell
+    kustomizer build inventory demo-app \
+        --artifact oci://ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
+    ```
+
+    See the [Get started with OCI](get-started-oci.md) guide for more details.    
+
+## Install the demo app
+
+Install the demo application by applying the local overlay on the cluster:
+
+```console
+$ kustomizer apply inventory demo-app -k ./examples/demo-app --prune --wait \
+    --source="$(git ls-remote --get-url)" \
+    --revision="$(git describe --always)"
 building inventory...
 applying 10 manifest(s)...
-Namespace/kustomizer-demo created
-ServiceAccount/kustomizer-demo/demo created
-ClusterRole/kustomizer-demo-read-only created
-ClusterRoleBinding/kustomizer-demo-read-only created
-Service/kustomizer-demo/backend created
-Service/kustomizer-demo/frontend created
-Deployment/kustomizer-demo/backend created
-Deployment/kustomizer-demo/frontend created
-HorizontalPodAutoscaler/kustomizer-demo/backend created
-HorizontalPodAutoscaler/kustomizer-demo/frontend created
+Namespace/kustomizer-demo-app created
+ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k created
+Service/kustomizer-demo-app/backend created
+Service/kustomizer-demo-app/cache created
+Service/kustomizer-demo-app/frontend created
+Deployment/kustomizer-demo-app/backend created
+Deployment/kustomizer-demo-app/cache created
+Deployment/kustomizer-demo-app/frontend created
+HorizontalPodAutoscaler/kustomizer-demo-app/backend created
+HorizontalPodAutoscaler/kustomizer-demo-app/frontend created
 waiting for resources to become ready...
 all resources are ready
 ```
 
-Kustomizer scans the given path recursively for Kubernetes manifests in YAML format,
-validates them against the cluster, applies them with server-side apply, and finally
-waits for the workloads to be rolled out.
+Kustomizer builds the overlay, validates the resulting resources against the Kubernetes API,
+applies the resources with server-side apply, and finally waits for the workloads to be rolled out.
 
-To apply Kustomize overlays, you can use `kustomizer apply -k path/to/overlay`,
-for more details see `kustomizer apply --help`.
+!!! info "Apply from other sources"
 
-## List inventories
+    Besides kustomize overlays, you can apply plain Kubernetes manifests using the `-f` flag:
+    
+    ```shell
+    kustomizer apply inventory demo-app \
+        -f ./path/to/dir/ \
+        -f ./path/to/manifest.yaml
+    ```
+    
+    An alternative to local files, is to apply Kubernetes configs from container registries
+    using the `--artifact` flag:
+
+    ```shell
+    kustomizer apply inventory demo-app \
+        --artifact oci://ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
+    ```
+
+    For more details see `kustomizer apply inventory --help`.
+
+## List and inspect the app config
 
 After applying the resources, Kustomizer creates an inventory.
 You can list all inventories in a specific namespace with:
 
 ```console
 $ kustomizer get inventories -n default
-
-NAME	ENTRIES	SOURCE                                        	REVISION	LAST APPLIED         
-demo	10     	https://github.com/stefanprodan/kustomizer.git	e44c210 	2021-12-06T16:33:08Z
+NAME    	ENTRIES	SOURCE                                        	REVISION	LAST APPLIED         
+demo-app	10     	https://github.com/stefanprodan/kustomizer.git	6aca8c2 	2021-12-22T09:15:22Z
 ```
 
-## List resources
-
-You can list the Kubernetes objects in an inventory with:
+You can view the Kubernetes objects in an inventory with:
 
 ```console
-$ kustomizer get inventory demo
-
-Inventory: default/demo
-LastApplied: 2021-09-06T16:33:08Z
+$ kustomizer inspect inventory demo-app
+Inventory: default/demo-app
+LastAppliedAt: 2021-12-22T09:15:22Z
 Source: https://github.com/stefanprodan/kustomizer.git
-Revision: e44c210
-Entries:
-- Namespace/kustomizer-demo
-- ServiceAccount/kustomizer-demo/demo
-- ClusterRole/kustomizer-demo-read-only
-- ClusterRoleBinding/kustomizer-demo-read-only
-- Service/kustomizer-demo/backend
-- Service/kustomizer-demo/frontend
-- Deployment/kustomizer-demo/backend
-- Deployment/kustomizer-demo/frontend
-- HorizontalPodAutoscaler/kustomizer-demo/backend
-- HorizontalPodAutoscaler/kustomizer-demo/frontend
+Revision: 6aca8c2
+Resources:
+- Namespace/kustomizer-demo-app
+- ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
+- Service/kustomizer-demo-app/backend
+- Service/kustomizer-demo-app/cache
+- Service/kustomizer-demo-app/frontend
+- Deployment/kustomizer-demo-app/backend
+- Deployment/kustomizer-demo-app/cache
+- Deployment/kustomizer-demo-app/frontend
+- HorizontalPodAutoscaler/kustomizer-demo-app/backend
+- HorizontalPodAutoscaler/kustomizer-demo-app/frontend
 ```
 
 The inventory records are used to track which objects are subject to garbage collection.
 The inventory is persistent on the cluster as a ConfigMap.
 
-## Diff changes
+## Diff the app config changes
 
-Change the max replicas of the `backend` HPA and remove the `frontend` and the `rbac` manifests from the local dir:
+Delete the frontend workload and change the Redis version to `6.2.1` by editing
+the `./examples/demo-app/kustomization.yaml` file.
 
-```bash
-rm -rf testdata/plain/frontend
-rm -rf testdata/plain/common/rbac.yaml
+If you have [yq](https://github.com/mikefarah/yq) installed, run:
+
+```shell
+yq eval 'del(.resources[0])' -i ./examples/demo-app/kustomization.yaml
+yq eval '.images[1].newTag="6.2.1"' -i ./examples/demo-app/kustomization.yaml
 ```
 
-Preview the changes using diff:
+Preview the changes using the diff command:
 
 ```console
-$ kustomizer diff -i demo -f ./testdata/plain/ --prune
-
-► HorizontalPodAutoscaler/kustomizer-demo/backend drifted
-@@ -11,7 +11,7 @@
-         resourceVersion: "572967"
-         uid: ca841aab-46b9-4a51-8e44-3cf5f615791d
-     spec:
--        maxReplicas: 4
-+        maxReplicas: 5
-         metrics:
-             - resource:
-                 name: cpu
-► ClusterRole/kustomizer-demo-read-only deleted
-► ClusterRoleBinding/kustomizer-demo-read-only deleted
-► Service/kustomizer-demo/frontend deleted
-► Deployment/kustomizer-demo/frontend deleted
-► HorizontalPodAutoscaler/kustomizer-demo/frontend deleted
+$ kustomizer diff inventory demo-app -k ./examples/demo-app --prune
+► Deployment/kustomizer-demo-app/cache drifted
+@@ -5,7 +5,7 @@
+     deployment.kubernetes.io/revision: "1"
+     env: demo
+   creationTimestamp: "2021-12-22T09:47:37Z"
+-  generation: 1
++  generation: 2
+   labels:
+     app.kubernetes.io/instance: webapp
+     inventory.kustomizer.dev/name: demo-app
+@@ -36,7 +36,7 @@
+       - command:
+         - redis-server
+         - /redis-master/redis.conf
+-        image: public.ecr.aws/docker/library/redis:6.2.0
++        image: public.ecr.aws/docker/library/redis:6.2.1
+         imagePullPolicy: IfNotPresent
+         livenessProbe:
+           failureThreshold: 3
+► Service/kustomizer-demo-app/frontend deleted
+► Deployment/kustomizer-demo-app/frontend deleted
+► HorizontalPodAutoscaler/kustomizer-demo-app/frontend deleted
 ```
 
-Note that when diffing Kubernetes secrets, kustomizer masks the secret values in the output.
+Note that when diffing Kubernetes secrets, Kustomizer diff masks the secret values in the output.
 
-## Update resources
+## Update the demo app
 
-Rerun the apply command:
+Rerun the apply command to update the demo application:
 
 ```console
-$ kustomizer apply -i demo -f testdata/plain/ --prune --wait
-
+$ kustomizer apply inventory demo-app -k ./examples/demo-app --prune --wait \
+    --source="$(git ls-remote --get-url)" \
+    --revision="$(git describe --dirty --always)"
 building inventory...
-applying 5 manifest(s)...
-Namespace/kustomizer-demo unchanged
-ServiceAccount/kustomizer-demo/demo unchanged
-Service/kustomizer-demo/backend unchanged
-Deployment/kustomizer-demo/backend unchanged
-HorizontalPodAutoscaler/kustomizer-demo/backend configured
-HorizontalPodAutoscaler/kustomizer-demo/frontend deleted
-Deployment/kustomizer-demo/frontend deleted
-Service/kustomizer-demo/frontend deleted
-ClusterRoleBinding/kustomizer-demo-read-only deleted
-ClusterRole/kustomizer-demo-read-only deleted
+applying 7 manifest(s)...
+Namespace/kustomizer-demo-app unchanged
+ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k unchanged
+Service/kustomizer-demo-app/backend unchanged
+Service/kustomizer-demo-app/cache unchanged
+Deployment/kustomizer-demo-app/backend unchanged
+Deployment/kustomizer-demo-app/cache configured
+HorizontalPodAutoscaler/kustomizer-demo-app/backend unchanged
+HorizontalPodAutoscaler/kustomizer-demo-app/frontend deleted
+Deployment/kustomizer-demo-app/frontend deleted
+Service/kustomizer-demo-app/frontend deleted
 waiting for resources to become ready...
 all resources are ready
 ```
@@ -158,21 +215,22 @@ all resources are ready
 After applying the resources, Kustomizer removes the Kubernetes objects that are not present in the current inventory.
 Kustomizer garbage collector deletes the namespaced objects first then it removes the non-namspaced ones.
 
-## Delete resources
+## Delete the demo app
 
-Delete all the Kubernetes objects belonging to an inventory including the inventory ConfigMap:
+Delete all the Kubernetes resources belonging to an inventory including the inventory storage:
 
 ```console
-$ kustomizer delete -i demo --wait
-
+$ kustomizer delete inventory demo-app --wait
 retrieving inventory...
-deleting 5 manifest(s)...
-HorizontalPodAutoscaler/kustomizer-demo/backend deleted
-Deployment/kustomizer-demo/backend deleted
-Service/kustomizer-demo/backend deleted
-ServiceAccount/kustomizer-demo/demo deleted
-Namespace/kustomizer-demo deleted
-ConfigMap/default/demo deleted
+deleting 7 manifest(s)...
+HorizontalPodAutoscaler/kustomizer-demo-app/backend deleted
+Deployment/kustomizer-demo-app/cache deleted
+Deployment/kustomizer-demo-app/backend deleted
+Service/kustomizer-demo-app/cache deleted
+Service/kustomizer-demo-app/backend deleted
+ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k deleted
+Namespace/kustomizer-demo-app deleted
+ConfigMap/default/demo-app deleted
 waiting for resources to be terminated...
 all resources have been deleted
 ```
