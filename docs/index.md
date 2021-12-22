@@ -1,7 +1,7 @@
 # Kustomizer
 
 Kustomizer is an experimental package manager for distributing Kubernetes configuration as OCI artifacts.
-It offers commands to publish, fetch, customize, validate, apply and prune Kubernetes resources.
+It offers commands to publish, fetch, diff, customize, validate, apply and prune Kubernetes resources.
 
 ## Concepts
 
@@ -17,7 +17,8 @@ Kustomizer comes with commands for managing OCI artifacts:
 - `kustomizer tag artifact oci://<image-url>:<tag> <new-tag>`
 - `kustomizer pull artifact oci://<image-url>:<tag>`
 - `kustomizer inspect artifact oci://<image-url>:<tag>`
-
+- `kustomizer diff artifact <oci url> <oci url>`
+ 
 Kustomizer is compatible with Docker Hub, GHCR, ACR, ECR, GCR, Artifactory,
 self-hosted Docker Registry and others. For auth, it uses the credentials from `~/.docker/config.json`.
 
@@ -44,7 +45,9 @@ list, diff, update, and delete inventories:
 - `kustomizer inspect inventory <name> --namespace <namespace>`
 - `kustomizer delete inventory <name> --namespace <namespace>`
 
-To connect to Kubernetes API, Kustomizer uses the current context from `~/.kube/config`.
+When applying resources from OCI artifacts, Kustomizer saves the artifacts URL and
+the image SHA-2 digest in the inventory. For deterministic and repeatable apply operations,
+you could use digests instead of tags.
 
 ## Comparison with other tools
 

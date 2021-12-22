@@ -23,9 +23,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestDiff(t *testing.T) {
+func TestDiffInventory(t *testing.T) {
 	g := NewWithT(t)
-	id := "apply-" + randStringRunes(5)
+	id := "diff-" + randStringRunes(5)
 
 	err := createNamespace(id)
 	g.Expect(err).NotTo(HaveOccurred())
