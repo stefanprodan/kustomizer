@@ -1,7 +1,6 @@
 site_name: kustomizer
 site_description: |
-  Build, diff, apply, prune command-line utility for Kubernetes manifests and Kustomize overlays.
-  Powered by Kubernetes server-side apply.
+  An experimental package manager for distributing Kubernetes configuration as OCI artifacts.
 site_author: Stefan Prodan
 site_url: https://kustomizer.dev
 
@@ -11,8 +10,10 @@ edit_uri: ""
 
 theme:
   name: material
-  #logo: _assets/logo.png
+  logo: images/favicon-round.png
+  favicon: images/favicon-round.png
   language: en
+  custom_dir: docs/theme/
   palette:
     primary: deep purple
     accent: indigo
@@ -23,6 +24,7 @@ plugins:
   - search
 
 markdown_extensions:
+  - attr_list
   - admonition
   - meta
   - codehilite
