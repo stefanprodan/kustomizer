@@ -1,9 +1,9 @@
 # Kustomizer
 
-Kustomizer is an OSS tool for building Kubernetes continuous delivery workflows.
-It offers commands to publish, fetch, customize, validate, and apply Kubernetes configuration.
+Kustomizer is an experimental package manager for distributing Kubernetes configuration as OCI artifacts.
+It offers commands to publish, fetch, customize, validate, apply and prune Kubernetes resources.
 
-## Features
+## Concepts
 
 ### OCI Artifacts
 
@@ -68,7 +68,7 @@ Go packages to patch Kubernetes manifests and is compatible with `kustomize.conf
 
 Compared to `kustomize build`, `kustomizer build -k` does things a little different:
 
-- Pulls Kubernetes manifests from container registries.
+- Pulls resources from container registries.
 - Reorders the resources according to the provided configuration.
 - Allows `kustomization.yaml` to load files from outside their root directory.
 - Disallows the usage of Kustomize exec and container-based plugins.
