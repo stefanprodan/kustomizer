@@ -1,23 +1,46 @@
-## Using container registries to distribute Kubernetes configs
+# Get Started with OCI
 
-This is a tutorial on how to use Kustomizer, Consign, Trivy and GitHub Container Registry
-to build a secure delivery pipeline for your apps.
+Kustomizer offers a way to distribute Kubernetes configuration as OCI artifacts.
+This means you can store your application configuration in the same 
+registry where your application container images are.
 
-Publisher workflow:
-- tag app release
-- build and push the app image
-- update the app version in the Kubernetes configuration
-- build and push the app config image
-- sign the app and config images
+!!! important "Delivery workflow"
 
-Consumer workflow:
-- verify the config image provenance
-- inspect the config image and extract the app container image name
-- verify the app image provenance
-- scan the app image for vulnerabilities
-- deploy the app on Kubernetes using the manifest from the config image
+    As an application publisher you:
+
+    - release a new app version
+    - build and push the app container image
+    - update the app version in the Kubernetes configuration
+    - build and push the app config image
+    - sign the app and config images
+
+    As a Kubernetes operator you:
+
+    - verify the config image signature
+    - inspect the config image and extract the app container image name
+    - verify the container image signature
+    - scan the container image for vulnerabilities
+    - deploy the app onto clusters using the Kubernetes manifests from the config image    
+
+What follows is a tutorial on how to use Kustomizer, Cosign, Trivy and
+GitHub Container Registry to build a secure delivery pipeline for a sample application.
 
 ## Prerequisites
+
+Install [cosign](https://docs.sigstore.dev/cosign/installation/),
+[trivy](https://github.com/aquasecurity/trivy) and [yq](https://github.com/mikefarah/yq) with Homebrew:
+
+```shell
+brew install cosign yq aquasecurity/trivy/trivy
+```
+
+Generate a cosign key pair for image signing with:
+
+```shell
+cosign generate-key-pair
+```
+
+## Login to GitHub Container Registry
 
 Export you GitHub username:
 
@@ -25,37 +48,32 @@ Export you GitHub username:
 export GITHUB_USER="YOUR-GITHUB-USERNAME"
 ```
 
-Login to GitHub [Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry):
+Generate a [personal access token (PAT)](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+with read and write access to GitHub Container Registry. 
 
-=== "docker"
+Use the PAT to sign in to the container registry service at ghcr.io:
 
-    ```shell
-    echo <GHCR-PUSH-TOKEN> | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
-    ```
-
-=== "crane"
-
-    ```shell
-    go install github.com/google/go-containerregistry/cmd/crane@latest
-    echo <GHCR-PUSH-TOKEN> | crane auth login ghcr.io -u ${GITHUB_USER} --password-stdin
-    ```
-
-Install [cosign](https://docs.sigstore.dev/cosign/installation/) and generate a key for image signing:
-
-```shell
-cosign generate-key-pair
+```console
+$ echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
+> Login Succeeded
 ```
 
-## Publish and Sign the app config
+## Clone the demo app repository
 
 Clone the Kustomizer Git repository locally:
 
-```shell
+```bash
 git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
-Export the app config version:
+You'll be using a sample web application composed of two [podinfo](https://github.com/stefanprodan/podinfo)
+instances called `frontend` and `backend`, and a redis instance called `cache`.
+The web application's Kubernetes configuration is located at `./examples/demo-app`.
+
+## Publish and Sign the config image
+
+Export the config image URL and version:
 
 ```shell
 export CONFIG_IMAGE="ghcr.io/${GITHUB_USER}/kustomizer-demo-app"
@@ -66,7 +84,7 @@ Build and push the config image:
 
 ```console
 $ kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
-    -k ./testdata/oci/demo-app/
+    -k ./examples/demo-app/
 building manifests...
 Namespace/kustomizer-demo-app
 ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
@@ -134,7 +152,7 @@ Resources:
 ```
 
 You can list the container images referenced in the Kubernetes manifests and
-scan them for vulnerabilities with Aqua Security [Trivy](https://github.com/aquasecurity/trivy):
+scan them for vulnerabilities with [trivy](https://github.com/aquasecurity/trivy):
 
 ```console
 kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
@@ -143,7 +161,7 @@ kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
 
 ## Install the app
 
-Install the application using the app config from the registry:
+Install the demo application using the manifests from the config image:
 
 ```console
 $ kustomizer apply inventory kustomizer-demo-app --wait --prune \
@@ -174,7 +192,7 @@ NAME               	ENTRIES	SOURCE                                  	REVISION	LA
 kustomizer-demo-app	10     	ghcr.io/stefanprodan/kustomizer-demo-app	v1.0.0  	2021-12-16T10:33:10Z
 ```
 
-Inspect the inventory to find the artifact digest:
+Inspect the inventory to find the config image digest:
 
 ```console
 $ kustomizer inspect inv kustomizer-demo-app -n default
@@ -208,14 +226,14 @@ export CONFIG_VERSION="1.0.1"
 Change the Redis container image tag with [yq](https://github.com/mikefarah/yq):
 
 ```shell
-yq eval '.images[1].newTag="6.2.1"' -i ./testdata/oci/demo-app/kustomization.yaml
+yq eval '.images[1].newTag="6.2.1"' -i ./examples/demo-app/kustomization.yaml
 ```
 
 Push a new config image:
 
 ```shell
 kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
-  -k ./testdata/oci/demo-app/ 
+  -k ./examples/demo-app/ 
 ```
 
 Sign the new version:
@@ -289,14 +307,17 @@ all resources are ready
 
 ## Patch upstream configs
 
-Patch the app config using a Kustomize strategic merge patch and apply the changes:
+At apply time, you can modify the manifests using
+[kustomize patches](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/patchMultipleObjects.md).
+
+Mark the application pods as safe to evict by the cluster autoscaler with:
 
 ```console
 $ kustomizer apply inventory kustomizer-demo-app --wait --prune \
   --artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
   --source ${CONFIG_IMAGE} \
   --revision ${CONFIG_VERSION} \
-  --patch ./testdata/patches/safe-to-evict.yaml
+  --patch ./examples/patches/safe-to-evict.yaml
 pulling ghcr.io/stefanprodan/kustomizer-demo-app:1.0.1
 applying 10 manifest(s)...
 Namespace/kustomizer-demo-app unchanged
@@ -315,10 +336,10 @@ all resources are ready
 
 ## Uninstall the app
 
-Delete the app from your cluster:
+Delete the app and its inventory from your cluster:
 
 ```console
-$ kustomizer delete inventory kustomizer-demo-app
+$ kustomizer delete inventory kustomizer-demo-app --wait
 retrieving inventory...
 deleting 10 manifest(s)...
 HorizontalPodAutoscaler/kustomizer-demo-app/frontend deleted

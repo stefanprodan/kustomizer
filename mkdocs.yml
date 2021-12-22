@@ -36,9 +36,9 @@ markdown_extensions:
 nav:
   - Introduction: index.md
   - Get Started: get-started.md
-  - Install: install.md
   - Get Started with OCI: get-started-oci.md
   - GitHub Actions: github-actions.md
+  - Install: install.md
   - Command Reference:
       - Artifact:
           - Push: cmd/kustomizer_push_artifact.md
