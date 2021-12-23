@@ -38,6 +38,8 @@ func TestBuild(t *testing.T) {
 				Body: `---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+commonAnnotations:
+  test: test-annotation
 patches:
   - target:
       kind: ConfigMap
@@ -45,7 +47,7 @@ patches:
       - op: add
         path: /data/patch
         value:
-          test
+          test-patch
 `,
 			},
 		},
@@ -76,6 +78,7 @@ patches:
 
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
-		g.Expect(output).To(MatchRegexp("patch"))
+		g.Expect(output).To(MatchRegexp("test-annotation"))
+		g.Expect(output).To(MatchRegexp("test-patch"))
 	})
 }

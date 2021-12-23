@@ -336,7 +336,15 @@ func applyPatches(kFilePath string, objects []*unstructured.Unstructured) ([]byt
 		return nil, err
 	}
 
+	kustomization.Namespace = template.Namespace
+	kustomization.NamePrefix = template.NamePrefix
+	kustomization.NameSuffix = template.NameSuffix
+	kustomization.CommonLabels = template.CommonLabels
+	kustomization.CommonAnnotations = template.CommonAnnotations
 	kustomization.Patches = template.Patches
+	kustomization.PatchesJson6902 = template.PatchesJson6902
+	kustomization.PatchesStrategicMerge = template.PatchesStrategicMerge
+	kustomization.Images = template.Images
 
 	d, err := yaml.Marshal(kustomization)
 	if err != nil {
