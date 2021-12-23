@@ -22,7 +22,7 @@ import (
 
 var diffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "Diff prints the differences between the local and the live version.",
+	Short: "Diff prints the differences between two sets of Kubernetes resources.",
 }
 
 func init() {

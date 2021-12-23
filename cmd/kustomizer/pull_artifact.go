@@ -33,16 +33,13 @@ For private registries, the pull command uses the credentials from '~/.docker/co
 	Example: `  kustomizer pull artifact <oci url>
 
   # Pull Kubernetes manifests from an OCI artifact hosted on Docker Hub
-  kustomizer pull oci://docker.io/user/repo:v1.0.0 > manifests.yaml
+  kustomizer pull artifact oci://docker.io/user/repo:v1.0.0 > manifests.yaml
 
   # Pull an OCI artifact using the digest and write the Kubernetes manifests to stdout
-  kustomizer pull oci://docker.io/user/repo@sha256:<digest>
+  kustomizer pull artifact oci://docker.io/user/repo@sha256:<digest>
 
   # Pull the latest artifact from a local registry
-  kustomizer pull oci://localhost:5000/repo
-
-  # Apply Kubernetes manifests from an OCI artifact 
-  kustomizer pull oci://docker.io/user/repo:v1.0.0 | kustomizer apply -i test -f-
+  kustomizer pull artifact oci://localhost:5000/repo
 `,
 	RunE: runPullArtifactCmd,
 }

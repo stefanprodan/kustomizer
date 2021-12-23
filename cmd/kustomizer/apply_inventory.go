@@ -37,6 +37,9 @@ var applyInventoryCmd = &cobra.Command{
   # Apply an inventory from remote OCI artifacts
   kustomizer apply inventory my-app -n apps -a oci://registry/org/repo:latest
 
+  # Apply an inventory using an OCI artifact digest
+  kustomizer apply inventory my-app -n apps -a oci://registry/org/repo@sha256:<digest>
+
   # Apply an inventory from remote OCI artifacts and local patches
   kustomizer apply inventory my-app -n apps -a oci://registry/org/repo:latest -p ./patches/safe-to-evict.yaml
 

@@ -46,6 +46,7 @@ nav:
           - Push: cmd/kustomizer_push_artifact.md
           - Tag: cmd/kustomizer_tag_artifact.md
           - Pull: cmd/kustomizer_pull_artifact.md
+          - Diff: cmd/kustomizer_diff_artifact.md
           - Inspect: cmd/kustomizer_inspect_artifact.md
       - Inventory:
           - Apply: cmd/kustomizer_apply_inventory.md

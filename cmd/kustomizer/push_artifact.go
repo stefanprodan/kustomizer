@@ -36,16 +36,16 @@ var pushArtifactCmd = &cobra.Command{
 builds the manifests into a multi-doc YAML, packages the YAML file into an OCI artifact and
 pushes the image to the container registry.
 The push command uses the credentials from '~/.docker/config.json'.`,
-	Example: `  kustomizer push <oci url> -k <overlay path> [-f <dir path>|<file path>]
+	Example: `  kustomizer push artifact <oci url> -k <overlay path> [-f <dir path>|<file path>]
 
   # Build Kubernetes plain manifests and push the resulting multi-doc YAML to Docker Hub
-  kustomizer push oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests
+  kustomizer push artifact oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests
 
   # Build a Kustomize overlay and push the resulting multi-doc YAML to GitHub Container Registry
-  kustomizer push oci://ghcr.io/user/repo:v1.0.0 -k ./deploy/production 
+  kustomizer push artifact oci://ghcr.io/user/repo:v1.0.0 -k ./deploy/production 
 
   # Push to a local registry
-  kustomizer push oci://localhost:5000/repo:latest -f ./deploy/manifests 
+  kustomizer push artifact oci://localhost:5000/repo:latest -f ./deploy/manifests 
 `,
 	RunE: runPushArtifactCmd,
 }
