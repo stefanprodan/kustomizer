@@ -14,10 +14,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+#  This script installs the Kustomizer CLI on Linux and macOS
+#  by performing the following operations:
+#  - Detects your OS and architecture
+#  - Downloads the release tar that matches your os/arch from GitHub.com
+#  - Verifies that the tar file checksum matches the one advertised on GitHub.com
+#  - Verifies the release signature using the public key from Keybase.pub
+#  - Unpacks the release tar file in a temporary directory
+#  - Copies the kustomizer binary to /usr/local/bin
+#  - Removes the temporary directory
+
 set -e
 
+VERSION=${1}
 DEFAULT_BIN_DIR="/usr/local/bin"
-BIN_DIR=${1:-"${DEFAULT_BIN_DIR}"}
+BIN_DIR=${2:-"${DEFAULT_BIN_DIR}"}
 GITHUB_REPO="stefanprodan/kustomizer"
 COSIGN_PUB_KEY="https://stefanprodan.keybase.pub/cosign/kustomizer.pub"
 
@@ -35,8 +46,8 @@ fatal() {
     exit 1
 }
 
-# Set os, fatal if operating system not supported
-setup_verify_os() {
+# Verify if the operating system is supported
+verify_os() {
     if [[ -z "${OS}" ]]; then
         OS=$(uname)
     fi
@@ -52,8 +63,8 @@ setup_verify_os() {
     esac
 }
 
-# Set arch, fatal if architecture not supported
-setup_verify_arch() {
+# Verify if the architecture is supported
+verify_arch() {
     if [[ -z "${ARCH}" ]]; then
         ARCH=$(uname -m)
     fi
@@ -72,7 +83,7 @@ setup_verify_arch() {
     esac
 }
 
-# Verify existence of downloader executable
+# Verify if the downloader binary is installed
 verify_downloader() {
     # Return failure if it doesn't exist or is no executable
     [[ -x "$(which "$1")" ]] || return 1
@@ -100,7 +111,13 @@ setup_tmp() {
 
 # Find version from Github metadata
 get_release_version() {
-    METADATA_URL="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+    if [[ -n "${VERSION}" ]]; then
+      SUFFIX_URL="tags/v${VERSION}"
+    else
+      SUFFIX_URL="latest"
+    fi
+
+    METADATA_URL="https://api.github.com/repos/${GITHUB_REPO}/releases/${SUFFIX_URL}"
 
     info "Downloading metadata ${METADATA_URL}"
     download "${TMP_METADATA}" "${METADATA_URL}"
@@ -133,8 +150,8 @@ download() {
     [[ $? -eq 0 ]] || fatal 'Download failed'
 }
 
-# Download hash from Github URL
-download_hash() {
+# Download checksums from Github
+download_checksum() {
     HASH_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_checksums.txt"
     set -e
 
@@ -144,7 +161,7 @@ download_hash() {
     HASH_EXPECTED=${HASH_EXPECTED%%[[:blank:]]*}
 }
 
-# Download binary from Github URL
+# Download release assets from Github
 download_binary() {
     BIN_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_${OS}_${ARCH}.tar.gz"
     info "Downloading binary ${BIN_URL}"
@@ -153,6 +170,7 @@ download_binary() {
     download "${TMP_BIN}.sig" "${BIN_URL}.sig"
 }
 
+# Calculate asset checksum
 compute_sha256sum() {
   cmd=$(which sha256sum shasum | head -n 1)
   case $(basename "$cmd") in
@@ -168,17 +186,17 @@ compute_sha256sum() {
   esac
 }
 
-# Verify downloaded binary hash
+# Verify the binary checksum
 verify_binary() {
-    info "Verifying binary download"
+    info "Verifying binary checksum"
     HASH_BIN=$(compute_sha256sum "${TMP_BIN}")
     HASH_BIN=${HASH_BIN%%[[:blank:]]*}
     if [[ "${HASH_EXPECTED}" != "${HASH_BIN}" ]]; then
-        fatal "Download sha256 does not match ${HASH_EXPECTED}, got ${HASH_BIN}"
+        fatal "Checksum does not match ${HASH_EXPECTED}, got ${HASH_BIN}"
     fi
 }
 
-# Verify the signature
+# Verify the release signature
 verify_signature() {
   if [[ -x "$(which "cosign")" ]]
   then
@@ -209,12 +227,12 @@ setup_binary() {
 
 # Run the install process
 {
-    setup_verify_os
-    setup_verify_arch
-    verify_downloader curl || verify_downloader wget || fatal 'Can not find curl or wget for downloading files'
+    verify_os
+    verify_arch
+    verify_downloader curl || verify_downloader wget || fatal 'Could not find curl or wget'
     setup_tmp
     get_release_version
-    download_hash
+    download_checksum
     download_binary
     verify_binary
     verify_signature

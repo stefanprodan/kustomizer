@@ -25,7 +25,7 @@ jobs:
         run: cd /tmp && curl -sSL ${GH_REL_URL} | tar xz && sudo mv github-release-notes /usr/local/bin/
       - name: Generate release notes
         run: |
-          echo 'CHANGELOG' > /tmp/release.txt
+          echo '## CHANGELOG' > /tmp/release.txt
           github-release-notes -org stefanprodan -repo kustomizer -since-latest-release >> /tmp/release.txt
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
