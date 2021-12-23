@@ -18,12 +18,20 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
     Install the latest release on macOS or Linux with:
     
     ```shell
-    curl -s https://kustomizer.dev/install.sh | sudo bash
+    curl -s https://kustomizer.dev/install.sh | bash
     ```
 
-    The install script downloads the latest release from GitHub and copies the kustomizer binary to `/usr/local/bin`.
-    If [cosign](https://github.com/sigstore/cosign) is found in PATH, the script will verify the signature
-    of the release using the public key from [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
+    To install a specific version:
+
+    ```shell
+    curl -s https://kustomizer.dev/install.sh | bash -s 2.0.0
+    ```
+
+    The install script downloads the specified version from GitHub and
+    copies the kustomizer binary to `/usr/local/bin`.
+    If [cosign](https://github.com/sigstore/cosign) is found in PATH,
+    the script will verify the signature of the release using the public key from
+    [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
 
 === "Install from source"
 
