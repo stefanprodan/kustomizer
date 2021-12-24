@@ -29,7 +29,7 @@ import (
 	"github.com/stefanprodan/kustomizer/pkg/config"
 )
 
-var VERSION = "1.0.0-dev.0"
+var VERSION = "2.0.0-dev.0"
 
 const PROJECT = "kustomizer"
 
