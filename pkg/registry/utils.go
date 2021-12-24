@@ -43,10 +43,11 @@ func ParseURL(ociURL string) (string, error) {
 func craneOptions(ctx context.Context) []crane.Option {
 	return []crane.Option{
 		crane.WithContext(ctx),
-		crane.WithUserAgent("kustomizer/v1"),
+		crane.WithUserAgent("kustomizer/v2"),
 		crane.WithPlatform(&gcrv1.Platform{
-			Architecture: "none",
-			OS:           "none",
+			Architecture: "yaml",
+			OS:           "kustomizer",
+			OSVersion:    "v2",
 		}),
 	}
 }
