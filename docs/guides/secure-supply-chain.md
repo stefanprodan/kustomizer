@@ -61,7 +61,7 @@ with read and write access to GitHub Container Registry.
 Use the PAT to sign in to the container registry service at ghcr.io:
 
 ```console
-$ echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
+$ echo $CR_PAT | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
 > Login Succeeded
 ```
 
