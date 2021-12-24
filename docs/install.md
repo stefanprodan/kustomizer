@@ -11,7 +11,7 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
     brew install stefanprodan/tap/kustomizer
     ```
 
-    Note that the Homebrew formula will setup shell autocompletion for Bash, Fish and ZSH.
+    Note that the Homebrew formula will setup shell autocompletion for Bash, Fish and Zsh.
 
 === "Install with curl"
 
@@ -45,7 +45,7 @@ the binaries can be downloaded form GitHub [release page](https://github.com/ste
 
 Configure your shell to load kustomizer completions:
 
-=== "bash"
+=== "Bash"
 
     To load completion run:
     
@@ -56,18 +56,19 @@ Configure your shell to load kustomizer completions:
     To configure your bash shell to load completions for each session add to your bashrc:
 
     ```shell
-    # ~/.bashrc or ~/.profile
+    # ~/.bashrc or ~/.bash_profile
     command -v kustomizer >/dev/null && . <(kustomizer completion bash)
     ```
 
     If you have an alias for kustomizer, you can extend shell completion to work with that alias:
 
     ```shell
-    echo 'alias kz=kustomizer' >>~/.bashrc
-    echo 'complete -F __start_kustomizer kz' >>~/.bashrc
+    # ~/.bashrc or ~/.bash_profile
+    alias kz=kustomizer
+    complete -F __start_kustomizer kz
     ```
 
-=== "fish"
+=== "Fish"
 
     To configure your fish shell to [load completions](http://fishshell.com/docs/current/index.html#completion-own)
     for each session write this script to your completions dir:
@@ -76,7 +77,7 @@ Configure your shell to load kustomizer completions:
     kustomizer completion fish > ~/.config/fish/completions/kustomizer.fish
     ```
 
-=== "powershell"
+=== "Powershell"
 
     To load completion run:
 
@@ -99,7 +100,7 @@ Configure your shell to load kustomizer completions:
     kustomizer completion >> kustomizer-completions.ps1
     ```
 
-=== "zsh"
+=== "Zsh"
 
     To load completion run:
     

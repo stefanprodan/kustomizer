@@ -17,6 +17,8 @@ theme:
   palette:
     primary: deep purple
     accent: indigo
+  features:
+    - navigation.sections
 
 docs_dir: docs
 
@@ -38,9 +40,11 @@ markdown_extensions:
 nav:
   - Introduction: index.md
   - Get Started: get-started.md
-  - Get Started with OCI: get-started-oci.md
-  - GitHub Actions: github-actions.md
   - Install: install.md
+  - GitHub Actions: github-actions.md
+  - Guides:
+      - Secure your Kubernetes supply chain with Kustomizer and Cosign: guides/secure-supply-chain.md
+      - Deploy applications from Git with Kustomizer: guides/deploy-from-git.md
   - Command Reference:
       - Artifact:
           - Push: cmd/kustomizer_push_artifact.md

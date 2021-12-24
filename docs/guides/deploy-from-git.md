@@ -1,32 +1,35 @@
-# Get Started
+# Deploy applications from Git with Kustomizer
 
-This guide shows you how to install Kustomizer and how to deploy a sample application to a Kubernetes cluster.
-To follow the guide you'll need a Kubernetes cluster version 1.20 or newer.
+This guide shows you how to deploy a sample application to a Kubernetes cluster.
 
-## Install the Kustomizer CLI
+You'll be using a sample app composed of two [podinfo](https://github.com/stefanprodan/podinfo)
+instances called `frontend` and `backend`, and a redis instance called `cache`.
+The application's Kustomize overlay is located at
+[examples/demo-app](https://github.com/stefanprodan/kustomizer/tree/main/examples/demo-app).
 
-Install the latest release on macOS or Linux with:
+## Before you begin
 
-```shell
-brew install stefanprodan/tap/kustomizer
-```
+- Install the Kustomizer CLI by the following instructions in the [Installation guide](../install.md).
+- Have a Kubernetes cluster version 1.20 or newer.
 
-For other installation methods, see the CLI [install documentation](install.md).
+!!! info "Kubernetes authentication"
 
-## Clone the demo app repository
+    To connect to Kubernetes API, Kustomizer uses the current context from `~/.kube/config`.
+    You can set a different context with `--context=<your context>`.
+    You can also specify a different kubeconfig with `--kubeconfig` or with the `KUBECONFIG` env var.
+
+## Manual deployment 
+
+### Clone the app repository
 
 Clone the Kustomizer Git repository locally:
 
-```shell
+```bash
 git clone https://github.com/stefanprodan/kustomizer
 cd kustomizer
 ```
 
-You'll be using a sample web application composed of two [podinfo](https://github.com/stefanprodan/podinfo)
-instances called `frontend` and `backend`, and a redis instance called `cache`.
-The web application's Kubernetes configuration is located at `./examples/demo-app`.
-
-## Build the demo app config
+### Build the app config
 
 Build the demo application to see its Kubernetes configuration:
 
@@ -51,20 +54,7 @@ PASS - stdin contains a valid HorizontalPodAutoscaler (kustomizer-demo-app.backe
 PASS - stdin contains a valid HorizontalPodAutoscaler (kustomizer-demo-app.frontend)
 ```
 
-!!! info "OCI artifacts"
-
-    Kustomizer offers a way to distribute Kubernetes configuration using container registries.
-    Instead of using the local overlay, you can build the same resources from an OCI artifact
-    hosted on GitHub Container Registry:
-    
-    ```shell
-    kustomizer build inventory demo-app \
-        --artifact oci://ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
-    ```
-
-    See the [Get started with OCI](get-started-oci.md) guide for more details.    
-
-## Install the demo app
+### Install the app
 
 Install the demo application by applying the local overlay on the cluster:
 
@@ -111,7 +101,7 @@ applies the resources with server-side apply, and finally waits for the workload
 
     For more details see `kustomizer apply inventory --help`.
 
-## List and inspect the app config
+### List and inspect the app config
 
 After applying the resources, Kustomizer creates an inventory.
 You can list all inventories in a specific namespace with:
@@ -146,7 +136,7 @@ Resources:
 The inventory records are used to track which objects are subject to garbage collection.
 The inventory is persistent on the cluster as a ConfigMap.
 
-## Diff the app config changes
+### Diff the app config changes
 
 Delete the frontend workload and change the Redis version to `6.2.1` by editing
 the `./examples/demo-app/kustomization.yaml` file.
@@ -188,7 +178,7 @@ $ kustomizer diff inventory demo-app -k ./examples/demo-app --prune
 
 Note that when diffing Kubernetes secrets, Kustomizer diff masks the secret values in the output.
 
-## Update the demo app
+### Update the app
 
 Rerun the apply command to update the demo application:
 
@@ -215,7 +205,7 @@ all resources are ready
 After applying the resources, Kustomizer removes the Kubernetes objects that are not present in the current inventory.
 Kustomizer garbage collector deletes the namespaced objects first then it removes the non-namspaced ones.
 
-## Delete the demo app
+### Delete the app
 
 Delete all the Kubernetes resources belonging to an inventory including the inventory storage:
 
@@ -234,3 +224,47 @@ ConfigMap/default/demo-app deleted
 waiting for resources to be terminated...
 all resources have been deleted
 ```
+
+## Automated deployment
+
+You can automate the deployment process by running Kustomizer in CI.
+
+Here is an example of a GitHub Actions workflow that deploys the app
+every time there is a change to the Kubernetes configuration:
+
+```yaml
+name: deploy
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'examples/demo-app/**'
+
+jobs:
+  kustomizer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup kubeconfig
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Setup kustomizer
+        uses: stefanprodan/kustomizer/action@main
+      - name: Diff
+        continue-on-error: true
+        run: |
+          kustomizer diff inventory ${{ github.event.repository.name }} \
+            -k ./examples/demo-app --prune
+      - name: Deploy
+        run: |
+          kustomizer apply inventory ${{ github.event.repository.name }} \
+            --source=${{ github.event.repository.html_url }} \
+            --revision=${{ github.sha }} \
+            -k ./examples/demo-app --prune --wait
+```
+
+For more details on how to use Kustomizer within GitHub workflows,
+please see the [GitHub Actions documentation](../github-actions.md).
