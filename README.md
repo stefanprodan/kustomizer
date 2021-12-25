@@ -15,7 +15,7 @@ and requires a Kubernetes cluster **v1.20** or newer.
 ## Install
 
 The Kustomizer CLI is available as a binary executable for all major platforms,
-the binaries can be downloaded form [GitHub](https://github.com/stefanprodan/kustomizer/releases).
+the binaries can be downloaded from GitHub [releases](https://github.com/stefanprodan/kustomizer/releases).
 
 Install the latest release on macOS or Linux with Homebrew:
 

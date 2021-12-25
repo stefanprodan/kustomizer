@@ -1,8 +1,12 @@
-# Get Started with OCI
+# Secure your Kubernetes supply chain with Kustomizer and Cosign
 
 Kustomizer offers a way to distribute Kubernetes configuration as OCI artifacts.
 This means you can store your application configuration in the same 
 registry where your application container images are.
+
+[Cosign](https://github.com/sigstore/cosign) is tool for signing and verifying OCI artifacts.
+You can use Cosign to sign both your application container images (created with Docker)
+and the config images (created with Kustomizer).
 
 !!! important "Delivery workflow"
 
@@ -22,16 +26,19 @@ registry where your application container images are.
     - scan the container image for vulnerabilities
     - deploy the app onto clusters using the Kubernetes manifests from the config image    
 
-What follows is a tutorial on how to use Kustomizer, Cosign, Trivy and
+What follows is a guide on how to use Kustomizer, Cosign, Trivy and
 GitHub Container Registry to build a secure delivery pipeline for a sample application.
 
 ## Prerequisites
 
+To follow this guide you'll need a GitHub account and a Kubernetes cluster version 1.20 or newer.
+
 Install [cosign](https://docs.sigstore.dev/cosign/installation/),
-[trivy](https://github.com/aquasecurity/trivy) and [yq](https://github.com/mikefarah/yq) with Homebrew:
+[trivy](https://github.com/aquasecurity/trivy), [yq](https://github.com/mikefarah/yq)
+and Kustomizer with Homebrew:
 
 ```shell
-brew install cosign yq aquasecurity/trivy/trivy
+brew install cosign yq aquasecurity/trivy/trivy stefanprodan/tap/kustomizer
 ```
 
 Generate a cosign key pair for image signing with:
@@ -54,7 +61,7 @@ with read and write access to GitHub Container Registry.
 Use the PAT to sign in to the container registry service at ghcr.io:
 
 ```console
-$ echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
+$ echo $CR_PAT | docker login ghcr.io -u ${GITHUB_USER} --password-stdin
 > Login Succeeded
 ```
 

@@ -94,7 +94,7 @@ func runInspectArtifactCmd(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	rootCmd.Println("Artifact: oci://", meta.Digest)
+	rootCmd.Println(fmt.Sprintf("Artifact: oci://%s", meta.Digest))
 	rootCmd.Println("BuiltBy:", fmt.Sprintf("kustomizer/v%s", meta.Version))
 	rootCmd.Println("CreatedAt:", meta.Created)
 	rootCmd.Println("Checksum:", meta.Checksum)
