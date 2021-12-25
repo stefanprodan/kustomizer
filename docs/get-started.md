@@ -196,7 +196,7 @@ Resources:
 - HorizontalPodAutoscaler/kustomizer-demo-app/frontend
 ```
 
-At apply time, Kustomizer saves the artifact URL and the image SHA-2 digest in the inventory.
+At apply time, Kustomizer saves the artifact SHA-2 digest in the inventory.
 
 !!! info "Using digests"
 
@@ -209,7 +209,7 @@ At apply time, Kustomizer saves the artifact URL and the image SHA-2 digest in t
 
 ### Update the app
 
-Pull the latest version of the config image and diff changes:
+Pull the latest version and review the changes to the live version:
 
 ```console
 $ kustomizer diff inventory kustomizer-demo-app --prune \
@@ -235,6 +235,13 @@ $ kustomizer diff inventory kustomizer-demo-app --prune \
            failureThreshold: 3
 ```
 
+With the above command, Kustomizer performs a server-side apply dry-run for each resource,
+compares the result with the live version and prints the diff.
+If there are Kubernetes secrets in the diff output, their values will be masked.
+With `--prune`, the diff command will print all the stale objects 
+that would be garbage collected at apply time.
+
+
 Apply the latest configuration on your cluster:
 
 ```console
@@ -258,9 +265,19 @@ waiting for resources to become ready...
 all resources are ready
 ```
 
+For deterministic and repeatable apply operations, you can specify the artifact's digest
+instead of a mutable tag like `latest` e.g. `--artifact oci://registry/repo/app@sha256:hash`.
+
+Inspect the latest version to find its digest:
+
+```shell
+$ kustomizer inspect artifact oci://${CONFIG_IMAGE}:latest | grep oci://
+Artifact: oci://ghcr.io/stefanprodan/kustomizer-demo-app@sha256:19ded6e1dbe3eb859bd0f0fa6aa1960f6975097af8f19e252b951cf3e9e9e6e2
+```
+
 ### Uninstall the app
 
-Delete all the Kubernetes resources belonging to an inventory including the inventory storage:
+Delete all the Kubernetes resources from an inventory including the inventory storage:
 
 ```console
 $ kustomizer delete inventory kustomizer-demo-app --wait

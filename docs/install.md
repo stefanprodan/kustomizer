@@ -1,7 +1,7 @@
 # Install
 
 The Kustomizer CLI is available as a binary executable for all major platforms,
-the binaries can be downloaded form GitHub [release page](https://github.com/stefanprodan/kustomizer/releases).
+the binaries can be downloaded from GitHub [releases](https://github.com/stefanprodan/kustomizer/releases).
 
 === "Install with brew"
 
