@@ -131,9 +131,20 @@ kustomizer tag artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} latest
 
 ## Deploy the app on Kubernetes
 
+### List the app versions
+
+List all the available versions of the app config ordered by semver:
+
+```console
+$ kustomizer list artifacts oci://${CONFIG_IMAGE} --semver="*"
+VERSION	URL                                                  
+1.0.1  	oci://ghcr.io/stefanprodan/kustomizer-demo-app:1.0.1	
+1.0.0  	oci://ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
+```
+
 ### Install the app
 
-Apply the Kubernetes configuration from GHCR:
+Apply the `1.0.0` version of the Kubernetes configuration from the GHCR repository:
 
 ```console
 $ kustomizer apply inventory kustomizer-demo-app --wait --prune \
