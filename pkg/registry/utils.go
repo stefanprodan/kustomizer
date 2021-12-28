@@ -40,6 +40,20 @@ func ParseURL(ociURL string) (string, error) {
 	return url, nil
 }
 
+func ParseRepositoryURL(ociURL string) (string, error) {
+	if !strings.HasPrefix(ociURL, URLPrefix) {
+		return "", fmt.Errorf("URL must be in format 'oci://<domain>/<org>/<repo>'")
+	}
+
+	url := strings.TrimPrefix(ociURL, URLPrefix)
+	ref, err := name.ParseReference(url)
+	if err != nil {
+		return "", fmt.Errorf("'%s' invalid: %w", ociURL, err)
+	}
+
+	return fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr()), nil
+}
+
 func craneOptions(ctx context.Context) []crane.Option {
 	return []crane.Option{
 		crane.WithContext(ctx),

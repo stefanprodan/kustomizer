@@ -15,6 +15,7 @@ Kustomizer comes with commands for managing OCI artifacts:
 
 - `kustomizer push artifact oci://<image-url>:<tag> -k [-f] [-p]`
 - `kustomizer tag artifact oci://<image-url>:<tag> <new-tag>`
+- `kustomizer list artifacts oci://<repo-url> --semver <condition>`
 - `kustomizer pull artifact oci://<image-url>:<tag>`
 - `kustomizer inspect artifact oci://<image-url>:<tag>`
 - `kustomizer diff artifact <oci url> <oci url>`

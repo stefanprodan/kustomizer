@@ -3,6 +3,7 @@ module github.com/stefanprodan/kustomizer
 go 1.17
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/distribution/distribution/v3 v3.0.0-20211217182000-52e8a12674e6
 	github.com/fluxcd/pkg/ssa v0.7.0
 	github.com/google/go-containerregistry v0.7.0
