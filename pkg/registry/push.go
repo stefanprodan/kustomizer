@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"filippo.io/age"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -29,7 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 )
 
-func Push(ctx context.Context, url, content string, meta *Metadata) (string, error) {
+func Push(ctx context.Context, url string, data []byte, meta *Metadata, recipients []age.Recipient) (string, error) {
 	ref, err := name.ParseReference(url)
 	if err != nil {
 		return "", fmt.Errorf("parsing refernce failed: %w", err)
@@ -42,7 +43,20 @@ func Push(ctx context.Context, url, content string, meta *Metadata) (string, err
 	defer os.RemoveAll(tmpDir)
 
 	tarFile := filepath.Join(tmpDir, "all.tar")
-	if err := tarContent(tarFile, "all.yaml", content); err != nil {
+	dataFile := "all.yaml"
+
+	if len(recipients) > 0 {
+		meta.Encrypted = AgeEncryptionVersion
+		encData, err := encrypt(data, recipients)
+		if err != nil {
+			return "", fmt.Errorf("failed to encrypt data with age: %w", err)
+		}
+
+		dataFile = "all.yaml.age"
+		data = encData
+	}
+
+	if err := tarContent(tarFile, dataFile, data); err != nil {
 		return "", err
 	}
 

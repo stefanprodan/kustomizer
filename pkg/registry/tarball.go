@@ -23,7 +23,7 @@ import (
 	"strings"
 )
 
-func tarContent(tarPath string, name, data string) error {
+func tarContent(tarPath string, name string, data []byte) error {
 	tarFile, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func tarContent(tarPath string, name, data string) error {
 		return err
 	}
 
-	if _, err := tw.Write([]byte(data)); err != nil {
+	if _, err := tw.Write(data); err != nil {
 		return err
 	}
 

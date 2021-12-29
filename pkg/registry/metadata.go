@@ -16,27 +16,37 @@ limitations under the License.
 
 package registry
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
-	VersionAnnotation  = "kustomizer.dev/version"
-	ChecksumAnnotation = "kustomizer.dev/checksum"
-	CreatedAnnotation  = "kustomizer.dev/created"
+	VersionAnnotation    = "kustomizer.dev/version"
+	ChecksumAnnotation   = "kustomizer.dev/checksum"
+	CreatedAnnotation    = "kustomizer.dev/created"
+	EncryptedAnnotation  = "kustomizer.dev/encrypted"
+	AgeEncryptionVersion = "age-encryption.org/v1"
 )
 
 type Metadata struct {
-	Version  string `json:"version"`
-	Checksum string `json:"checksum"`
-	Created  string `json:"created"`
-	Digest   string `json:"digest"`
+	Version   string `json:"version"`
+	Checksum  string `json:"checksum"`
+	Created   string `json:"created"`
+	Encrypted string `json:"encrypted,omitempty"`
+	Digest    string `json:"digest,omitempty"`
 }
 
 func (m *Metadata) ToAnnotations() map[string]string {
-	return map[string]string{
+	annotations := map[string]string{
 		VersionAnnotation:  m.Version,
 		ChecksumAnnotation: m.Checksum,
 		CreatedAnnotation:  m.Created,
 	}
+
+	if m.Encrypted != "" {
+		annotations[EncryptedAnnotation] = m.Encrypted
+	}
+	return annotations
 }
 
 func GetMetadata(annotations map[string]string) (*Metadata, error) {
@@ -55,9 +65,15 @@ func GetMetadata(annotations map[string]string) (*Metadata, error) {
 		return nil, fmt.Errorf("'%s' annotation not found", CreatedAnnotation)
 	}
 
-	return &Metadata{
+	m := Metadata{
 		Version:  version,
 		Checksum: checksum,
 		Created:  created,
-	}, nil
+	}
+
+	if encrypted, ok := annotations[EncryptedAnnotation]; ok {
+		m.Encrypted = encrypted
+	}
+
+	return &m, nil
 }

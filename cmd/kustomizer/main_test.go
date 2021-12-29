@@ -200,6 +200,14 @@ func executeCommand(cmd string) (string, error) {
 func resetCmdArgs() {
 	applyInventoryArgs = applyInventoryFlags{}
 	buildInventoryArgs = buildInventoryFlags{}
+	deleteInventoryArgs = deleteInventoryFlags{}
+	diffInventoryArgs = diffInventoryFlags{}
+	diffArtifactArgs = diffArtifactFlags{}
+	getInventoriesArgs = getInventoriesFlags{}
+	inspectArtifactArgs = inspectArtifactFlags{}
+	listArtifactArgs = listArtifactFlags{}
+	pullArtifactArgs = pullArtifactFlags{}
+	pushArtifactArgs = pushArtifactFlags{}
 }
 
 var testManifests = func(name, namespace string, immutable bool) []TestFile {
@@ -263,4 +271,15 @@ spec:
 `, name),
 		},
 	}
+}
+
+var testAgeKeys = []TestFile{
+	{
+		Name: "id.txt",
+		Body: "AGE-SECRET-KEY-1T8RGCY3WV38GUZ0SE2WV7UMXUKFQM6D8KRU3343YZWNCKHE9XFQS23HS3A",
+	},
+	{
+		Name: "pub.txt",
+		Body: "age1g8vcnjz2ck2kdz6wesjtv0wfrx9tyavkqx5k9dj2ltk6xmt6432s8ds2te",
+	},
 }
