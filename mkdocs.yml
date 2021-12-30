@@ -44,6 +44,7 @@ nav:
   - GitHub Actions: github-actions.md
   - Guides:
       - Secure your Kubernetes supply chain with Kustomizer and Cosign: guides/secure-supply-chain.md
+      - Encryption at rest with Kustomizer and Age: guides/artifacts-encryption.md
       - Deploy applications from Git with Kustomizer: guides/deploy-from-git.md
   - Command Reference:
       - Artifact:
