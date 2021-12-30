@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -216,5 +217,61 @@ func TestApplyArtifact(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 		t.Logf("\n%s", output)
 		g.Expect(output).To(MatchRegexp(registryHost))
+	})
+}
+
+func TestApplyEncryptedArtifact(t *testing.T) {
+	g := NewWithT(t)
+	id := randStringRunes(5)
+	tag := "v1.0.0"
+	artifact := fmt.Sprintf("oci://%s/%s:%s", registryHost, id, tag)
+
+	err := createNamespace(id)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	dir, err := makeTestDir(id, testManifests(id, id, false))
+	g.Expect(err).NotTo(HaveOccurred())
+
+	ageDir, err := makeTestDir(id+"age", testAgeKeys)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	t.Run("pushes encrypted artifact", func(t *testing.T) {
+		output, err := executeCommand(fmt.Sprintf(
+			"push artifact %s -k %s --age-recipients %s",
+			artifact,
+			dir,
+			path.Join(ageDir, "pub.txt"),
+		))
+
+		g.Expect(err).NotTo(HaveOccurred())
+		t.Logf("\n%s", output)
+		g.Expect(output).To(MatchRegexp(id))
+	})
+
+	t.Run("decrypts and applies artifact", func(t *testing.T) {
+		output, err := executeCommand(fmt.Sprintf(
+			"apply inv %s -n %s -a %s --age-identities %s",
+			id,
+			id,
+			artifact,
+			path.Join(ageDir, "id.txt"),
+		))
+
+		g.Expect(err).NotTo(HaveOccurred())
+		t.Logf("\n%s", output)
+		g.Expect(output).To(MatchRegexp(id))
+
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      id,
+				Namespace: id,
+			},
+		}
+
+		err = envTestClient.Get(context.Background(), client.ObjectKeyFromObject(configMap), configMap)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(configMap.GetLabels()).To(HaveKeyWithValue("inventory.kustomizer.dev/name", id))
+		g.Expect(configMap.GetLabels()).To(HaveKeyWithValue("inventory.kustomizer.dev/namespace", id))
 	})
 }

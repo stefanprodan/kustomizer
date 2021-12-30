@@ -19,13 +19,14 @@ package registry
 import (
 	"context"
 	"crypto/sha256"
+	"filippo.io/age"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-func Pull(ctx context.Context, url string) (string, *Metadata, error) {
+func Pull(ctx context.Context, url string, identities []age.Identity) (string, *Metadata, error) {
 	ref, err := name.ParseReference(url)
 	if err != nil {
 		return "", nil, fmt.Errorf("parsing refernce failed: %w", err)
@@ -52,6 +53,10 @@ func Pull(ctx context.Context, url string) (string, *Metadata, error) {
 	}
 	meta.Digest = ref.Context().Digest(digest.String()).String()
 
+	if meta.Encrypted != "" && len(identities) < 1 {
+		return "", meta, fmt.Errorf("encrypted artifact, you need to supply a private key for decryption")
+	}
+
 	layers, err := img.Layers()
 	if err != nil {
 		return "", nil, err
@@ -69,6 +74,14 @@ func Pull(ctx context.Context, url string) (string, *Metadata, error) {
 	content, err := untarContent(blob)
 	if err != nil {
 		return "", nil, err
+	}
+
+	if meta.Encrypted == AgeEncryptionVersion && len(identities) > 0 {
+		plainContent, err := decrypt([]byte(content), identities)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to decrypt content: %w", err)
+		}
+		content = string(plainContent)
 	}
 
 	if meta.Checksum != fmt.Sprintf("%x", sha256.Sum256([]byte(content))) {
