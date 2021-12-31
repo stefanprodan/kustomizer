@@ -50,6 +50,23 @@ When applying resources from OCI artifacts, Kustomizer saves the artifacts URL a
 the image SHA-2 digest in the inventory. For deterministic and repeatable apply operations,
 you could use digests instead of tags.
 
+### Encryption at rest
+
+Kustomizer has builtin support for encrypting and decrypting Kubernetes configuration (packaged as OCI artifacts)
+using [age](https://github.com/FiloSottile/age) asymmetric keys.
+
+To securely distribute sensitive Kubernetes configuration to trusted users,
+you can encrypt the artifacts with their age public keys:
+
+- `kustomizer push artifact <oci url> --age-recipients <public keys>`
+
+Users can access the artifacts by decrypting them with their age private keys:
+
+- `kustomizer inspect artifact <oci url> --age-identities <private keys>`
+- `kustomizer pull artifact <oci url> --age-identities <private keys>`
+- `kustomizer apply inventory -a <oci url> --age-identities <private keys>`
+- `kustomizer diff inventory -a <oci url> --age-identities <private keys>`
+
 ## Comparison with other tools
 
 ### vs kubectl

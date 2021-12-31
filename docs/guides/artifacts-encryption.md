@@ -1,6 +1,6 @@
 # Encryption at rest with Kustomizer and Age
 
-Kustomize has builtin support for encrypting and decrypting Kubernetes configuration (packaged as OCI artifacts)
+Kustomizer has builtin support for encrypting and decrypting Kubernetes configuration (packaged as OCI artifacts)
 using Actually Good Encryption (age) asymmetric keys.
 [Age](https://github.com/FiloSottile/age) is a modern and secure encryption tool 
 with small explicit keys that is a viable alternative to [PGP](https://en.wikipedia.org/wiki/Pretty_Good_Privacy).
