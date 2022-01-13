@@ -23,6 +23,8 @@ import (
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/stefanprodan/kustomizer/pkg/inventory"
@@ -162,6 +164,23 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 
 	applyOpts := ssa.DefaultApplyOptions()
 	applyOpts.Force = applyInventoryArgs.force
+	applyOpts.Cleanup = ssa.ApplyCleanupOptions{
+		Annotations: []string{
+			corev1.LastAppliedConfigAnnotation,
+		},
+		FieldManagers: []ssa.FiledManager{
+			{
+				// to undo changes made with 'kubectl apply --server-side --force-conflicts'
+				Name:          "kubectl",
+				OperationType: metav1.ManagedFieldsOperationApply,
+			},
+			{
+				// to undo changes made with 'kubectl apply'
+				Name:          "kubectl",
+				OperationType: metav1.ManagedFieldsOperationUpdate,
+			},
+		},
+	}
 
 	waitOpts := ssa.DefaultWaitOptions()
 	waitOpts.Timeout = rootArgs.timeout

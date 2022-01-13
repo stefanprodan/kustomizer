@@ -78,11 +78,7 @@ func (inv *Inventory) SetSource(url, revision string, artifacts []string) {
 func (inv *Inventory) AddObjects(objects []*unstructured.Unstructured) error {
 	sort.Sort(ssa.SortableUnstructureds(objects))
 	for _, om := range objects {
-		objMetadata, err := object.UnstructuredToObjMeta(om)
-		if err != nil {
-			return err
-		}
-
+		objMetadata := object.UnstructuredToObjMetadata(om)
 		gv, err := schema.ParseGroupVersion(om.GetAPIVersion())
 		if err != nil {
 			return err
