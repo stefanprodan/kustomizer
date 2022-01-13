@@ -44,6 +44,8 @@ signs:
     stdin: '{{ .Env.COSIGN_PASSWORD }}'
     args: ["sign-blob", "--key=/tmp/cosign.key", "--output=${signature}", "${artifact}"]
     artifacts: all
+sboms:
+  - artifacts: archive
 brews:
   - name: kustomizer
     tap:
