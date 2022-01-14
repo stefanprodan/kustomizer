@@ -68,8 +68,6 @@ release-docs:
 DEMO_IMAGE ?= ghcr.io/stefanprodan/kustomizer-demo-app
 DEMO_TAG ?= 0.0.1
 publish-demo:
-	kustomizer push artifact -k ./examples/demo-app oci://$(DEMO_IMAGE):$(DEMO_TAG)
+	kustomizer push artifact -k ./examples/demo-app oci://$(DEMO_IMAGE):$(DEMO_TAG) --sign --cosign-key ~/.cosign/cosign.key
 	kustomizer tag artifact oci://$(DEMO_IMAGE):$(DEMO_TAG) latest
-	cosign sign --key ~/.cosign/cosign.key $(DEMO_IMAGE):$(DEMO_TAG)
-	cosign verify --key https://stefanprodan.keybase.pub/cosign/kustomizer.pub $(DEMO_IMAGE)
-	kustomizer inspect artifact oci://$(DEMO_IMAGE)
+	kustomizer inspect artifact oci://$(DEMO_IMAGE)  --verify --key ~/.cosign/cosign.pub

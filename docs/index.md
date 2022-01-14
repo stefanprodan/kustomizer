@@ -27,6 +27,18 @@ Assuming you've automated your application's build & push workflow using Docker,
 you can extend the automation to do the same for your Kubernetes configuration
 that describes how your application gets deployed.
 
+### Sign & Verify Artifacts
+
+Kustomizer can sign and verify artifacts using [sigstore/cosign](https://github.com/sigstore/cosign) either with
+static keys, Cloud KMS or keyless signatures (when running kustomizer with GitHub Actions):
+
+- `kustomizer push artifact --sign --cosign-key <private key>`
+- `kustomizer pull artifact --verify --cosign-key <public key>`
+- `kustomizer inspect artifact --verify --cosign-key <public key>`
+
+For an example on how to secure your Kubernetes supply chain with Kustomizer and Cosign
+please see [this guide](guides/secure-supply-chain.md).
+
 ### Resource Inventories
 
 Kustomizer offers a way for grouping Kubernetes resources.
