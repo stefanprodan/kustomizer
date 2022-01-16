@@ -71,3 +71,9 @@ publish-demo:
 	kustomizer push artifact -k ./examples/demo-app oci://$(DEMO_IMAGE):$(DEMO_TAG) --sign --cosign-key ~/.cosign/cosign.key
 	kustomizer tag artifact oci://$(DEMO_IMAGE):$(DEMO_TAG) latest
 	kustomizer inspect artifact oci://$(DEMO_IMAGE)  --verify --key ~/.cosign/cosign.pub
+
+dockerfile:
+	echo \
+FROM gcr.io/distroless/static\\n\
+COPY --chmod=755 kustomizer /\\n\
+CMD ["/kustomizer"] > Dockerfile.distroless

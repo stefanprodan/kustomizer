@@ -71,3 +71,51 @@ brews:
       (fish_completion/"kustomizer.fish").write fish_output
     test: |
       system "#{bin}/kustomizer --version"
+before:
+  hooks:
+    - make dockerfile
+dockers:
+  - image_templates:
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-amd64'
+    dockerfile: Dockerfile.distroless
+    use_buildx: true
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--pull"
+      - "--build-arg=ARCH=linux/amd64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.name={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--platform=linux/amd64"
+  - image_templates:
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-arm64'
+    dockerfile: Dockerfile.distroless
+    use_buildx: true
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--pull"
+      - "--build-arg=ARCH=linux/arm64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.name={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--platform=linux/arm64"
+docker_manifests:
+  - name_template: 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}'
+    image_templates:
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-amd64'
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-arm64'
+  - name_template: 'ghcr.io/stefanprodan/{{ .ProjectName }}:latest'
+    image_templates:
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-amd64'
+      - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-arm64'
+docker_signs:
+  - cmd: cosign
+    stdin: '{{ .Env.COSIGN_PASSWORD }}'
+    args: ["sign", "--key=/tmp/cosign.key", "${artifact}"]
+    artifacts: all
