@@ -78,7 +78,7 @@ dockers:
   - image_templates:
       - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-amd64'
     dockerfile: Dockerfile.distroless
-    use_buildx: true
+    use: buildx
     goos: linux
     goarch: amd64
     build_flag_templates:
@@ -93,7 +93,7 @@ dockers:
   - image_templates:
       - 'ghcr.io/stefanprodan/{{ .ProjectName }}:{{ .Tag }}-arm64'
     dockerfile: Dockerfile.distroless
-    use_buildx: true
+    use: buildx
     goos: linux
     goarch: arm64
     build_flag_templates:
