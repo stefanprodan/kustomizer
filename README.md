@@ -50,6 +50,19 @@ Kustomizer comes with commands for managing OCI artifacts:
 Kustomizer is compatible with Docker Hub, GHCR, ACR, ECR, GCR, Artifactory,
 self-hosted Docker Registry and others. For auth, it uses the credentials from `~/.docker/config.json`.
 
+#### Sign & Verify Artifacts
+
+Kustomizer can sign and verify artifacts using [sigstore/cosign](https://github.com/sigstore/cosign) either with
+static keys, Cloud KMS or keyless signatures
+(when running [Kustomizer with GitHub Actions](https://kustomizer.dev/github-actions/#publish-signed-artifacts)):
+
+- `kustomizer push artifact --sign --cosign-key <private key>`
+- `kustomizer pull artifact --verify --cosign-key <public key>`
+- `kustomizer inspect artifact --verify --cosign-key <public key>`
+
+For an example on how to secure your Kubernetes supply chain with Kustomizer and Cosign
+please see [this guide](https://kustomizer.dev/guides/secure-supply-chain/).
+
 ### Resource Inventories
 
 Kustomizer offers a way for grouping Kubernetes resources.

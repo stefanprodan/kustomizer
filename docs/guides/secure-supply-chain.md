@@ -87,11 +87,18 @@ export CONFIG_IMAGE="ghcr.io/${GITHUB_USER}/kustomizer-demo-app"
 export CONFIG_VERSION="1.0.0"
 ```
 
-Build and push the config image:
+Export your cosign private key password:
+
+```shell
+COSIGN_PASSWORD=<YOUR-PASS>
+```
+
+Push and sign the config image:
 
 ```console
 $ kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
-    -k ./examples/demo-app/
+    -k ./examples/demo-app \
+    --sign --cosign-key cosign.key
 building manifests...
 Namespace/kustomizer-demo-app
 ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k
@@ -105,13 +112,7 @@ HorizontalPodAutoscaler/kustomizer-demo-app/backend
 HorizontalPodAutoscaler/kustomizer-demo-app/frontend
 pushing image ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0
 published digest ghcr.io/stefanprodan/kustomizer-demo-app@sha256:91d2bd8e0f1620e17e9d4c308ab87903644a952969d8ff52b601be0bffdca096
-```
-
-Sign the config image using your cosign private key:
-
-```console
-$ cosign sign --key cosign.key ${CONFIG_IMAGE}:${CONFIG_VERSION}
-Pushing signature to: ghcr.io/stefanprodan/kustomizer-demo-app
+cosign pushing signature to: ghcr.io/stefanprodan/kustomizer-demo-app
 ```
 
 Tag the config image as latest:
@@ -135,12 +136,14 @@ The following checks were performed on each of these signatures:
 [{"critical":{"identity":{"docker-reference":"ghcr.io/stefanprodan/kustomizer-demo-app"},"image":{"docker-manifest-digest":"sha256:148c7452232a334e4843048ec41180c0c23644c30e87672bd961f31ee7ac2fca"},"type":"cosign container image signature"},"optional":null}]
 ```
 
-List the Kubernetes manifests from the config image:
+Verify the image using your cosign public key and list the Kubernetes manifests from the config image:
 
 ```console
-$ kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION}
+$ kustomizer inspect artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
+    --verify --cosign-key cosign.pub
 Artifact: oci:// ghcr.io/stefanprodan/kustomizer-demo-app@sha256:98ebc5889a1031efe84d0d27cff4a235b9fadd5378781789b8e44cbf177424cd
 BuiltBy: kustomizer/v2.0.0
+VerifiedBy: cosign
 CreatedAt: 2021-12-15T10:05:46Z
 Resources:
 - Namespace/kustomizer-demo-app
@@ -240,13 +243,7 @@ Push a new config image:
 
 ```shell
 kustomizer push artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} \
-  -k ./examples/demo-app/ 
-```
-
-Sign the new version:
-
-```shell
-cosign sign --key cosign.key ${CONFIG_IMAGE}:${CONFIG_VERSION}
+  -k ./examples/demo-app/ --sign --cosign-key cosign.key
 ```
 
 Tag the config image as latest:
@@ -260,7 +257,8 @@ kustomizer tag artifact oci://${CONFIG_IMAGE}:${CONFIG_VERSION} latest
 Verify the latest version:
 
 ```shell
-cosign verify --key cosign.pub ${CONFIG_IMAGE}:latest
+kustomizer inspect artifact oci://${CONFIG_IMAGE}:latest \
+    --verify --cosign-key cosign.pub
 ```
 
 Pull the latest config image and diff changes:

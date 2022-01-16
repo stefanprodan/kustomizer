@@ -55,6 +55,47 @@ jobs:
           kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest
 ```
 
+## Publish signed artifacts
+
+Example of publishing signed artifacts using cosgin [keyless signatures](https://github.com/sigstore/cosign/blob/main/KEYLESS.md)
+and GitHub OIDC:
+
+```yaml
+name: publish
+on:
+  push:
+    tag:
+      - 'v*'
+
+env:
+  ARTIFACT: oci://ghcr.io//${{github.repository_owner}}/${{github.event.repository.name}}
+
+jobs:
+  kustomizer:
+    runs-on: ubuntu-latest
+      permissions:
+      id-token: write   # This is the key for OIDC!
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@main
+      - name: Setup kustomizer
+        uses: stefanprodan/kustomizer/action@main
+      - name: Push
+        run: |
+          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy
+      - name: Tag latest
+        run: |
+          kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest
+```
+
 ## Deploy to Kubernetes from GHCR
 
 Example of applying Kubernetes manifests from an OCI artifact:
@@ -88,8 +129,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
+      - name: Setup cosign
+        uses: sigstore/cosign-installer@main
       - name: Setup kustomizer
         uses: stefanprodan/kustomizer/action@main
+      - name: Verify signature
+        run: |
+          kustomizer inspect artifact ${ARTIFACT}:${{ github.event.inputs.name }} --verify
       - name: Deploy
         run: |
           kustomizer apply inventory ${{ github.event.repository.name }} \
