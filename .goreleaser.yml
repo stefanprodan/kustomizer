@@ -1,4 +1,6 @@
 project_name: kustomizer
+changelog:
+  use: github-native
 builds:
   - <<: &build_defaults
       binary: kustomizer
