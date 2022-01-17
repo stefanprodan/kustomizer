@@ -3,6 +3,9 @@
 The Kustomizer CLI is available as a binary executable for all major platforms,
 the binaries can be downloaded from GitHub [releases](https://github.com/stefanprodan/kustomizer/releases).
 
+The release artifacts are signed with [cosign](https://github.com/sigstore/cosign)
+and each release comes with a Software Bill of Materials (SBOM) in SPDX format.
+
 === "Install with brew"
 
     Install the latest release on macOS or Linux with:
@@ -124,6 +127,26 @@ Configure your shell to load kustomizer completions:
     mv _kustomizer ~/.oh-my-zsh/completions  # oh-my-zsh
     mv _kustomizer ~/.zprezto/modules/completion/external/src/  # zprezto
     ```
+
+## Container Images
+
+Signed release images are available at
+[ghcr.io/stefanprodan/kustomizer](https://github.com/stefanprodan/kustomizer/pkgs/container/kustomizer).
+The container images are multi-arch (amd64 and arm64) and they are tagged with the version number
+e.g. `ghcr.io/stefanprodan/kustomizer:v2.0.0`.
+
+Verify the latest image with cosign:
+
+```shell
+cosign verify --key https://stefanprodan.keybase.pub/cosign/kustomizer.pub \
+  ghcr.io/stefanprodan/kustomizer:latest
+```
+
+Pull the image and run kustomizer with docker:
+
+```shell
+docker run ghcr.io/stefanprodan/kustomizer /kustomizer -v
+```
 
 ## Configuration
 
