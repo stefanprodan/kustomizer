@@ -2,8 +2,7 @@
 
 The Kustomizer CLI is available as a binary executable for all major platforms,
 the binaries can be downloaded from GitHub [releases](https://github.com/stefanprodan/kustomizer/releases).
-
-The release artifacts are signed with [cosign](https://github.com/sigstore/cosign)
+The binaries checksums are signed with [cosign](https://github.com/sigstore/cosign)
 and each release comes with a Software Bill of Materials (SBOM) in SPDX format.
 
 === "Install with brew"
@@ -33,7 +32,7 @@ and each release comes with a Software Bill of Materials (SBOM) in SPDX format.
     The install script downloads the specified version from GitHub and
     copies the kustomizer binary to `/usr/local/bin`.
     If [cosign](https://github.com/sigstore/cosign) is found in PATH,
-    the script will verify the signature of the release using the public key from
+    the script will verify the signature of the release checksums using the public key from
     [stefanprodan.keybase.pub/cosign/kustomizer.pub](https://stefanprodan.keybase.pub/cosign/kustomizer.pub).
 
 === "Install from source"
