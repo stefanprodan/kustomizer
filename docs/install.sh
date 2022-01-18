@@ -155,10 +155,29 @@ download_checksum() {
     HASH_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_checksums.txt"
     set -e
 
-    info "Downloading hash ${HASH_URL}"
+    info "Downloading checksums ${HASH_URL}"
     download "${TMP_HASH}" "${HASH_URL}"
+
+    info "Downloading checksums signature ${HASH_URL}.sig"
+    download "${TMP_HASH}.sig" "${HASH_URL}.sig"
+
     HASH_EXPECTED=$(grep " kustomizer_${VERSION_KUSTOMIZER}_${OS}_${ARCH}.tar.gz$" "${TMP_HASH}")
     HASH_EXPECTED=${HASH_EXPECTED%%[[:blank:]]*}
+}
+
+# Verify the checksums signature
+verify_checksum_signature() {
+  if [[ -x "$(which "cosign")" ]]
+  then
+    info "Verifying signature with cosign"
+    if cosign verify-blob --key "${COSIGN_PUB_KEY}" --signature "${TMP_HASH}.sig" "${TMP_HASH}" > /dev/null 2>&1; then
+       info "Verified OK"
+    else
+       fatal "Failed to verify signature"
+    fi
+  else
+    info "Verifying signature skipped, cosign not found in PATH"
+  fi
 }
 
 # Download release assets from Github
@@ -166,8 +185,6 @@ download_binary() {
     BIN_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_${OS}_${ARCH}.tar.gz"
     info "Downloading binary ${BIN_URL}"
     download "${TMP_BIN}" "${BIN_URL}"
-    info "Downloading signature ${BIN_URL}.sig"
-    download "${TMP_BIN}.sig" "${BIN_URL}.sig"
 }
 
 # Calculate asset checksum
@@ -196,21 +213,6 @@ verify_binary() {
     fi
 }
 
-# Verify the release signature
-verify_signature() {
-  if [[ -x "$(which "cosign")" ]]
-  then
-    info "Verifying signature with cosign"
-    if cosign verify-blob --key "${COSIGN_PUB_KEY}" --signature "${TMP_BIN}.sig" "${TMP_BIN}" > /dev/null 2>&1; then
-       info "Verified OK"
-    else
-       fatal "Failed to verify signature"
-    fi
-  else
-    info "Verifying signature skipped, cosign not found in PATH"
-  fi
-}
-
 # Setup permissions and move binary
 setup_binary() {
     chmod 755 "${TMP_BIN}"
@@ -233,8 +235,8 @@ setup_binary() {
     setup_tmp
     get_release_version
     download_checksum
+    verify_checksum_signature
     download_binary
     verify_binary
-    verify_signature
     setup_binary
 }
