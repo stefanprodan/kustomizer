@@ -43,11 +43,12 @@ archives:
       - LICENSE
 source:
   enabled: true
+  name_template: '{{ .ProjectName }}_{{ .Version }}_source_code'
 sboms:
   - id: source
     artifacts: source
-checksum:
-  name_template: 'checksums.txt'
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_sbom.spdx.json"
 signs:
   - cmd: cosign
     stdin: '{{ .Env.COSIGN_PASSWORD }}'
