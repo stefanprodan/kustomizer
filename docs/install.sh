@@ -152,8 +152,7 @@ download() {
 
 # Download checksums from Github
 download_checksum() {
-    HASH_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/kustomizer_${VERSION_KUSTOMIZER}_checksums.txt"
-    set -e
+    HASH_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION_KUSTOMIZER}/checksums.txt"
 
     info "Downloading checksums ${HASH_URL}"
     download "${TMP_HASH}" "${HASH_URL}"
