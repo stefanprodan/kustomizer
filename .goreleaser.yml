@@ -41,13 +41,22 @@ archives:
     format: zip
     files:
       - LICENSE
+source:
+  enabled: true
+sboms:
+  - id: source
+    artifacts: source
+checksum:
+  name_template: 'checksums.txt'
 signs:
   - cmd: cosign
     stdin: '{{ .Env.COSIGN_PASSWORD }}'
-    args: ["sign-blob", "--key=/tmp/cosign.key", "--output=${signature}", "${artifact}"]
-    artifacts: all
-sboms:
-  - artifacts: archive
+    args:
+      - sign-blob
+      - '--key=/tmp/cosign.key'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+    artifacts: checksum
 brews:
   - name: kustomizer
     tap:
