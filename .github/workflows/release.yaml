@@ -4,6 +4,11 @@ on:
   push:
     tags: [ 'v*' ]
 
+permissions:
+  contents: write # needed to write releases
+  id-token: write # needed for keyless signing
+  packages: write # needed for ghcr access
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
