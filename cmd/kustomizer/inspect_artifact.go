@@ -39,6 +39,12 @@ For private registries, the inspect command uses the credentials from '~/.docker
   # Inspect an OCI artifact
   kustomizer inspect artifact oci://docker.io/user/repo:latest
 
+  # Verify artifact with cosign public key
+  kustomizer inspect artifact oci://docker.io/user/repo:v1.0.0 --verify --cosign-key ./keys/cosign.pub
+
+  # Verify artifact signed with cosign and GitHub OIDC
+  kustomizer inspect artifact oci://docker.io/user/repo:v1.0.0 --verify
+
   # List only the container images references
   kustomizer inspect artifact oci://docker.io/user/repo:v1.0 --container-images
 `,
