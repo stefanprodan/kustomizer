@@ -142,7 +142,7 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 
 	invalid := false
 	for _, object := range objects {
-		change, liveObject, mergedObject, err := resMgr.Diff(ctx, object)
+		change, liveObject, mergedObject, err := resMgr.Diff(ctx, object, ssa.DefaultDiffOptions())
 		if err != nil {
 			logger.Println(`✗`, err)
 			invalid = true
