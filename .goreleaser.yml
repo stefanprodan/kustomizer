@@ -69,6 +69,7 @@ brews:
     homepage: "https://kustomizer.dev/"
     description: "Kustomizer CLI"
     dependencies:
+      - name: cosign
       - name: diffutils
         type: optional
     install: |
