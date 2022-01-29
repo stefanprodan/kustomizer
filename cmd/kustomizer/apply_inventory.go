@@ -168,7 +168,7 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 		Annotations: []string{
 			corev1.LastAppliedConfigAnnotation,
 		},
-		FieldManagers: []ssa.FiledManager{
+		FieldManagers: []ssa.FieldManager{
 			{
 				// to undo changes made with 'kubectl apply --server-side --force-conflicts'
 				Name:          "kubectl",
@@ -177,6 +177,10 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 			{
 				// to undo changes made with 'kubectl apply'
 				Name:          "kubectl",
+				OperationType: metav1.ManagedFieldsOperationUpdate,
+			},
+			{
+				Name:          "before-first-apply",
 				OperationType: metav1.ManagedFieldsOperationUpdate,
 			},
 		},

@@ -6,14 +6,14 @@ require (
 	filippo.io/age v1.0.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/distribution/distribution/v3 v3.0.0-20211217182000-52e8a12674e6
-	github.com/fluxcd/pkg/ssa v0.10.0
+	github.com/fluxcd/pkg/ssa v0.12.0
 	github.com/google/go-containerregistry v0.8.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/gomega v1.17.0
 	github.com/spf13/cobra v1.3.0
 	k8s.io/api v0.23.1
-	k8s.io/apiextensions-apiserver v0.23.0
+	k8s.io/apiextensions-apiserver v0.23.1
 	k8s.io/apimachinery v0.23.1
 	k8s.io/cli-runtime v0.23.1
 	k8s.io/client-go v0.23.1
@@ -123,7 +123,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/component-base v0.23.0 // indirect
+	k8s.io/component-base v0.23.1 // indirect
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/kubectl v0.22.2 // indirect
