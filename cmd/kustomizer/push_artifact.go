@@ -50,6 +50,13 @@ The push command uses the credentials from '~/.docker/config.json'.`,
   # Push to a local registry
   kustomizer push artifact oci://localhost:5000/repo:latest -f ./deploy/manifests 
 
+  # Push and sign artifact with cosign
+  export COSIGN_PASSWORD="<KEY-PASS>"
+  kustomizer push artifact oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests --sign --cosign-key ./keys/cosign.key
+
+  # Push and sign artifact with cosign and GitHub OIDC (GH Actions)
+  kustomizer push artifact oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests --sign
+
   # Push encrypted artifact
   kustomizer push artifact oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests --age-recipients ./keys/pub.txt 
 `,

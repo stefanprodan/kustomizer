@@ -67,30 +67,27 @@ on:
     tag:
       - 'v*'
 
+permissions:
+  contents: read # needed for checkout
+  id-token: write # needed for keyless signing
+  packages: write # needed for GHCR access
+
 env:
   ARTIFACT: oci://ghcr.io//${{github.repository_owner}}/${{github.event.repository.name}}
 
 jobs:
   kustomizer:
     runs-on: ubuntu-latest
-      permissions:
-      id-token: write   # This is the key for OIDC!
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
       - name: Setup cosign
         uses: sigstore/cosign-installer@main
       - name: Setup kustomizer
         uses: stefanprodan/kustomizer/action@main
-      - name: Push
+      - name: Push and sign
         run: |
-          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy
+          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy --sign
       - name: Tag latest
         run: |
           kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest

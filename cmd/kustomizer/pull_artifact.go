@@ -42,6 +42,9 @@ For private registries, the pull command uses the credentials from '~/.docker/co
   # Pull the latest artifact from a local registry
   kustomizer pull artifact oci://localhost:5000/repo
 
+  # Pull and verify artifact with cosign
+  kustomizer pull artifact oci://docker.io/user/repo:v1.0.0 --verify --cosign-key ./keys/cosign.pub
+
   # Pull encrypted artifact
   kustomizer pull artifact oci://docker.io/user/repo:v1.0.0 --age-identities ./keys/id.txt
 `,
