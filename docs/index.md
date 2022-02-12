@@ -94,6 +94,12 @@ Compared to `kubectl apply -f`, `kustomizer apply -f` does things a little diffe
 - Waits for the applied resources to be fully reconciled (checks the ready status of replicasets, services, ingresses, and other custom resources).
 - Deletes stale objects like ConfigMaps and Secrets generated with Kustomize or other tools.
 
+!!! warn
+
+    Note that if you use kubectl to edit an object managed by Kustomizer,
+    all changes will be undone when Kustomizer reconciles an inventory containing that object.
+    In addition, Kustomizer removes the `last-applied-configuration` annotation set by `kubectl apply`.
+
 ### vs kustomize
 
 Kustomizer uses the [sigs.k8s.io/kustomize](https://pkg.go.dev/sigs.k8s.io/kustomize/api)

@@ -130,17 +130,11 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 		fixReplicasConflict(object, objects)
 	}
 
-	kubeClient, err := newKubeClient(kubeconfigArgs)
+	resMgr, err := newManager()
 	if err != nil {
-		return fmt.Errorf("client init failed: %w", err)
+		return err
 	}
 
-	statusPoller, err := newKubeStatusPoller(kubeconfigArgs)
-	if err != nil {
-		return fmt.Errorf("status poller init failed: %w", err)
-	}
-
-	resMgr := ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner)
 	resMgr.SetOwnerLabels(objects, name, *kubeconfigArgs.Namespace)
 
 	invStorage := &inventory.Storage{
@@ -188,6 +182,7 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 
 	waitOpts := ssa.DefaultWaitOptions()
 	waitOpts.Timeout = rootArgs.timeout
+	stageOneChangeSet := &ssa.ChangeSet{}
 
 	if len(stageOne) > 0 {
 		changeSet, err := resMgr.ApplyAll(ctx, stageOne, applyOpts)
@@ -197,15 +192,23 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 		for _, change := range changeSet.Entries {
 			logger.Println(change.String())
 		}
+		stageOneChangeSet = changeSet
+	}
 
-		if err := resMgr.Wait(stageOne, waitOpts); err != nil {
+	stageTwoMgr, err := newManager()
+	if err != nil {
+		return err
+	}
+
+	if len(stageOneChangeSet.Entries) > 0 {
+		if err := stageTwoMgr.WaitForSet(stageOneChangeSet.ToObjMetadataSet(), waitOpts); err != nil {
 			return err
 		}
 	}
 
 	sort.Sort(ssa.SortableUnstructureds(stageTwo))
 	for _, object := range stageTwo {
-		change, err := resMgr.Apply(ctx, object, applyOpts)
+		change, err := stageTwoMgr.Apply(ctx, object, applyOpts)
 		if err != nil {
 			return err
 		}
@@ -223,7 +226,7 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if applyInventoryArgs.prune && len(staleObjects) > 0 {
-		changeSet, err := resMgr.DeleteAll(ctx, staleObjects, ssa.DefaultDeleteOptions())
+		changeSet, err := stageTwoMgr.DeleteAll(ctx, staleObjects, ssa.DefaultDeleteOptions())
 		if err != nil {
 			return fmt.Errorf("prune failed, error: %w", err)
 		}
@@ -242,7 +245,7 @@ func runApplyInventoryCmd(cmd *cobra.Command, args []string) error {
 
 		if applyInventoryArgs.prune && len(staleObjects) > 0 {
 
-			err = resMgr.WaitForTermination(staleObjects, waitOpts)
+			err = stageTwoMgr.WaitForTermination(staleObjects, waitOpts)
 			if err != nil {
 				return fmt.Errorf("wating for termination failed, error: %w", err)
 			}
@@ -267,4 +270,18 @@ func fixReplicasConflict(object *unstructured.Unstructured, objects []*unstructu
 			}
 		}
 	}
+}
+
+func newManager() (*ssa.ResourceManager, error) {
+	kubeClient, err := newKubeClient(kubeconfigArgs)
+	if err != nil {
+		return nil, fmt.Errorf("client init failed: %w", err)
+	}
+
+	statusPoller, err := newKubeStatusPoller(kubeconfigArgs)
+	if err != nil {
+		return nil, fmt.Errorf("status poller init failed: %w", err)
+	}
+
+	return ssa.NewResourceManager(kubeClient, statusPoller, inventoryOwner), nil
 }
