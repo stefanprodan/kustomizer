@@ -67,7 +67,7 @@ func newKubeStatusPoller(rcg genericclioptions.RESTClientGetter) (*polling.Statu
 		return nil, err
 	}
 
-	return polling.NewStatusPoller(c, restMapper, nil), nil
+	return polling.NewStatusPoller(c, restMapper, polling.Options{}), nil
 }
 
 func newKubeConfig(rcg genericclioptions.RESTClientGetter) (*rest.Config, error) {
