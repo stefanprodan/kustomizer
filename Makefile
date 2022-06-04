@@ -3,7 +3,7 @@
 all: test build
 
 tidy:
-	rm -f go.sum; go mod tidy -compat=1.17
+	rm -f go.sum; go mod tidy -compat=1.18
 
 fmt:
 	go fmt ./...
