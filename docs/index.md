@@ -81,6 +81,22 @@ Users can access the artifacts by decrypting them with their age private keys:
 
 ## Comparison with other tools
 
+### vs flux
+
+Kustomizer produces OCI artifacts which are compatible with [Flux](https://fluxcd.io).
+For more details on how to continuously deploy applications to Kubernetes clusters
+with Flux and Kustomizer please see this [guide](guides/fluxcd.md).
+
+Kustomizer is akin to Flux's [kustomize-controller](https://github.com/fluxcd/kustomize-controller), and it shares
+the same reconcile engine that leverages Kubernetes server-side apply.
+
+Kustomizer can be used as intermediary step when migrating from CI driven deployments
+to [Flux](https://fluxcd.io/) and GitOps. If you're running `kubectl apply` in your CI pipelines,
+replacing kubectl with kustomizer, would smooth the transition to a continuous delivery system powered by Flux.
+
+At times, Kustomizer servers as a testing bench for experimental features that are proposed to the Flux community.
+For example, Kustomizer is the project where features like staged-apply, garbage collection and diffing where first introduced.
+
 ### vs kubectl
 
 Kustomizer makes use of [k8s.io/cli-runtime](https://pkg.go.dev/k8s.io/cli-runtime)
@@ -112,18 +128,6 @@ Compared to `kustomize build`, `kustomizer build -k` does things a little differ
 - Allows `kustomization.yaml` to load files from outside their root directory.
 - Disallows the usage of Kustomize exec and container-based plugins.
 - Extra patches can be specified with `kustomizer build -k ./overlay --patch ./patch1.yaml --patch ./patch2.yaml`.
-
-### vs flux
-
-Kustomizer is akin to Flux's [kustomize-controller](https://github.com/fluxcd/kustomize-controller), and it shares
-the same reconcile engine that leverages Kubernetes server-side apply.
-
-Kustomizer can be used as intermediary step when migrating from CI driven deployments
-to [Flux](https://fluxcd.io/) and GitOps. If you're running `kubectl apply` in your CI pipelines,
-replacing kubectl with kustomizer, would smooth the transition to a continuous delivery system powered by Flux.
-
-At times, Kustomizer servers as a testing bench for experimental features that are proposed to the Flux community.
-For example, Kustomizer is the project where features like staged-apply, garbage collection and diffing where first introduced.
 
 ## License
 
