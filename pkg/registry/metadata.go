@@ -26,14 +26,18 @@ const (
 	CreatedAnnotation    = "kustomizer.dev/created"
 	EncryptedAnnotation  = "kustomizer.dev/encrypted"
 	AgeEncryptionVersion = "age-encryption.org/v1"
+	SourceAnnotation     = "org.opencontainers.image.source"
+	RevisionAnnotation   = "org.opencontainers.image.revision"
 )
 
 type Metadata struct {
-	Version   string `json:"version"`
-	Checksum  string `json:"checksum"`
-	Created   string `json:"created"`
-	Encrypted string `json:"encrypted,omitempty"`
-	Digest    string `json:"digest,omitempty"`
+	Version        string `json:"version"`
+	Checksum       string `json:"checksum"`
+	Created        string `json:"created"`
+	Encrypted      string `json:"encrypted,omitempty"`
+	Digest         string `json:"digest,omitempty"`
+	SourceURL      string `json:"source_url"`
+	SourceRevision string `json:"source_revision"`
 }
 
 func (m *Metadata) ToAnnotations() map[string]string {
@@ -46,6 +50,15 @@ func (m *Metadata) ToAnnotations() map[string]string {
 	if m.Encrypted != "" {
 		annotations[EncryptedAnnotation] = m.Encrypted
 	}
+
+	if m.SourceURL != "" {
+		annotations[SourceAnnotation] = m.SourceURL
+	}
+
+	if m.SourceRevision != "" {
+		annotations[RevisionAnnotation] = m.SourceRevision
+	}
+
 	return annotations
 }
 
@@ -73,6 +86,14 @@ func GetMetadata(annotations map[string]string) (*Metadata, error) {
 
 	if encrypted, ok := annotations[EncryptedAnnotation]; ok {
 		m.Encrypted = encrypted
+	}
+
+	if sourceURL, ok := annotations[SourceAnnotation]; ok {
+		m.SourceURL = sourceURL
+	}
+
+	if sourceRevision, ok := annotations[RevisionAnnotation]; ok {
+		m.SourceRevision = sourceRevision
 	}
 
 	return &m, nil

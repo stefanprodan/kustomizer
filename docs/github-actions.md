@@ -49,7 +49,9 @@ jobs:
         uses: stefanprodan/kustomizer/action@main
       - name: Push
         run: |
-          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy
+          kustomizer push artifact ${ARTIFACT}:${{ github.ref_name }} -f ./deploy \
+          	--source=${{ github.repositoryUrl }} \
+            --revision="${{ github.ref_name }}/${{ github.sha }}"
       - name: Tag latest
         run: |
           kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest
@@ -85,9 +87,17 @@ jobs:
         uses: sigstore/cosign-installer@main
       - name: Setup kustomizer
         uses: stefanprodan/kustomizer/action@main
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push and sign
         run: |
-          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy --sign
+          kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} -f ./deploy --sign \
+          	--source=${{ github.repositoryUrl }} \
+            --revision="${{ github.ref_name }}/${{ github.sha }}"
       - name: Tag latest
         run: |
           kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest

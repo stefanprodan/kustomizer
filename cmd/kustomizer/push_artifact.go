@@ -42,10 +42,16 @@ The push command uses the credentials from '~/.docker/config.json'.`,
 	Example: `  kustomizer push artifact <oci url> -k <overlay path> [-f <dir path>|<file path>]
 
   # Build Kubernetes plain manifests and push the resulting multi-doc YAML to Docker Hub
-  kustomizer push artifact oci://docker.io/user/repo:v1.0.0 -f ./deploy/manifests
+  kustomizer push artifact oci://docker.io/user/repo:$(git rev-parse --short HEAD) \
+	-f ./deploy/manifests \
+	--source="$(git config --get remote.origin.url)" \
+	--revision="$(git branch --show-current)/$(git rev-parse HEAD)"
 
   # Build a Kustomize overlay and push the resulting multi-doc YAML to GitHub Container Registry
-  kustomizer push artifact oci://ghcr.io/user/repo:v1.0.0 -k ./deploy/production 
+  kustomizer push artifact oci://ghcr.io/user/repo:$(git tag --points-at HEAD) \
+	--kustomize="./deploy/production" \
+	--source="$(git config --get remote.origin.url)" \
+	--revision="$(git tag --points-at HEAD)/$(git rev-parse HEAD)"
 
   # Push to a local registry
   kustomizer push artifact oci://localhost:5000/repo:latest -f ./deploy/manifests 
@@ -70,6 +76,8 @@ type pushArtifactFlags struct {
 	ageRecipients string
 	sign          bool
 	signKey       string
+	source        string
+	revision      string
 }
 
 var pushArtifactArgs pushArtifactFlags
@@ -88,6 +96,8 @@ func init() {
 	pushArtifactCmd.Flags().StringVar(&pushArtifactArgs.signKey, "cosign-key", "",
 		"Path to the consign private key file, KMS URI or Kubernetes Secret. "+
 			"When not specified, cosign will try to producing an identity token from the environment (GH Actions or GCP).")
+	pushArtifactCmd.Flags().StringVar(&pushArtifactArgs.source, "source", "", "the source address, e.g. the Git URL")
+	pushArtifactCmd.Flags().StringVar(&pushArtifactArgs.revision, "revision", "", "the source revision in the format '<branch|tag>/<commit-sha>'")
 
 	pushCmd.AddCommand(pushArtifactCmd)
 }
@@ -138,9 +148,11 @@ func runPushArtifactCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	digest, err := registry.Push(ctx, url, []byte(yml), &registry.Metadata{
-		Version:  VERSION,
-		Checksum: fmt.Sprintf("%x", sha256.Sum256([]byte(yml))),
-		Created:  time.Now().UTC().Format(time.RFC3339),
+		Version:        VERSION,
+		Checksum:       fmt.Sprintf("%x", sha256.Sum256([]byte(yml))),
+		Created:        time.Now().UTC().Format(time.RFC3339),
+		SourceURL:      pushArtifactArgs.source,
+		SourceRevision: pushArtifactArgs.revision,
 	}, recipients)
 	if err != nil {
 		return fmt.Errorf("pushing image failed: %w", err)
