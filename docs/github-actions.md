@@ -31,16 +31,16 @@ on:
       - 'v*'
 
 env:
-  ARTIFACT: oci://ghcr.io//${{github.repository_owner}}/${{github.event.repository.name}}
+  ARTIFACT: oci://ghcr.io/${{github.repository_owner}}/${{github.event.repository.name}}
 
 jobs:
   kustomizer:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -75,20 +75,20 @@ permissions:
   packages: write # needed for GHCR access
 
 env:
-  ARTIFACT: oci://ghcr.io//${{github.repository_owner}}/${{github.event.repository.name}}
+  ARTIFACT: oci://ghcr.io/${{github.repository_owner}}/${{github.event.repository.name}}
 
 jobs:
   kustomizer:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup cosign
         uses: sigstore/cosign-installer@main
       - name: Setup kustomizer
         uses: stefanprodan/kustomizer/action@main
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -118,20 +118,20 @@ on:
         default: 'latest'
 
 env:
-  ARTIFACT: oci://ghcr.io//${{github.repository_owner}}/${{github.event.repository.name}}
+  ARTIFACT: oci://ghcr.io/${{github.repository_owner}}/${{github.event.repository.name}}
 
 jobs:
   kustomizer:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup kubeconfig
         uses: azure/k8s-set-context@v1
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -166,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup kubeconfig
         uses: azure/k8s-set-context@v1
         with:
@@ -184,3 +184,4 @@ jobs:
             --revision=${{ github.sha }} \
             -f ./deploy --prune --wait
 ```
+

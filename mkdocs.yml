@@ -46,6 +46,7 @@ nav:
       - Secure your Kubernetes supply chain with Kustomizer and Cosign: guides/secure-supply-chain.md
       - Encryption at rest with Kustomizer and Age: guides/artifacts-encryption.md
       - Deploy applications from Git with Kustomizer: guides/deploy-from-git.md
+      - Continuous deployment with Kustomizer and Flux: guides/fluxcd.md
   - Command Reference:
       - Artifact:
           - Push: cmd/kustomizer_push_artifact.md
