@@ -169,7 +169,7 @@ verify_checksum_signature() {
   if [[ -x "$(which "cosign")" ]]
   then
     info "Verifying signature with cosign"
-    if cosign verify-blob --key "${COSIGN_PUB_KEY}" --signature "${TMP_HASH}.sig" "${TMP_HASH}" > /dev/null 2>&1; then
+    if COSIGN_EXPERIMENTAL=1 cosign verify-blob --key "${COSIGN_PUB_KEY}" --signature "${TMP_HASH}.sig" "${TMP_HASH}" > /dev/null 2>&1; then
        info "Verified OK"
     else
        fatal "Failed to verify signature"
