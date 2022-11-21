@@ -1,6 +1,6 @@
 module github.com/stefanprodan/kustomizer
 
-go 1.18
+go 1.19
 
 require (
 	filippo.io/age v1.0.0
