@@ -62,7 +62,7 @@ func Push(ctx context.Context, url string, data []byte, meta *Metadata, recipien
 
 	img, err := crane.Append(empty.Image, tarFile)
 	if err != nil {
-		return "", fmt.Errorf("appeding content failed: %w", err)
+		return "", fmt.Errorf("appending content failed: %w", err)
 	}
 
 	img = mutate.Annotations(img, meta.ToAnnotations()).(gcrv1.Image)
