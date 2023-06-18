@@ -94,8 +94,8 @@ Kustomizer can be used as intermediary step when migrating from CI driven deploy
 to [Flux](https://fluxcd.io/) and GitOps. If you're running `kubectl apply` in your CI pipelines,
 replacing kubectl with kustomizer, would smooth the transition to a continuous delivery system powered by Flux.
 
-At times, Kustomizer servers as a testing bench for experimental features that are proposed to the Flux community.
-For example, Kustomizer is the project where features like staged-apply, garbage collection and diffing where first introduced.
+At times, Kustomizer serves as a testing bench for experimental features that are proposed to the Flux community.
+For example, Kustomizer is the project where features like staged-apply, garbage collection and diffing were first introduced.
 
 ### vs kubectl
 
