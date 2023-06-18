@@ -1,0 +1,1210 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An experimental package manager for distributing Kubernetes configuration as OCI artifacts.
+">
+      
+      
+        <meta name="author" content="Stefan Prodan">
+      
+      
+        <link rel="canonical" href="https://kustomizer.dev/guides/fluxcd/">
+      
+      
+        <link rel="prev" href="../deploy-from-git/">
+      
+      
+        <link rel="next" href="../../cmd/kustomizer_push_artifact/">
+      
+      <link rel="icon" href="../../images/favicon-round.png">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.6">
+    
+    
+      
+        <title>Continuous deployment with Kustomizer and Flux - kustomizer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.558e4712.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.2505c338.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+
+<meta property="og:url" content="https://kustomizer.dev/guides/fluxcd/">
+
+<meta property="og:title" content="Continuous deployment with Kustomizer and Flux - kustomizer">
+
+<meta property="og:description" content="An experimental package manager for distributing Kubernetes configuration as OCI artifacts.
+">
+<meta property="og:image" content="https://kustomizer.dev/images/card.png">
+<meta property="og:image:alt" content="kustomizer.dev">
+<meta property="og:image:type" content="image/png">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@stefanprodan">
+<meta name="twitter:creator" content="@stefanprodan">
+
+<meta property="twitter:title" content="Continuous deployment with Kustomizer and Flux">
+
+<meta name="twitter:description" content="An experimental package manager for distributing Kubernetes configuration as OCI artifacts.
+">
+<meta name="twitter:image" content="https://kustomizer.dev/images/favicon-square.png">
+<meta name="twitter:image:alt" content="kustomizer.dev">
+
+
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#continuous-deployment-with-kustomizer-and-flux" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="kustomizer" class="md-header__button md-logo" aria-label="kustomizer" data-md-component="logo">
+      
+  <img src="../../images/favicon-round.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            kustomizer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Continuous deployment with Kustomizer and Flux
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/stefanprodan/kustomizer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    stefanprodan/kustomizer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="kustomizer" class="md-nav__button md-logo" aria-label="kustomizer" data-md-component="logo">
+      
+  <img src="../../images/favicon-round.png" alt="logo">
+
+    </a>
+    kustomizer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/stefanprodan/kustomizer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    stefanprodan/kustomizer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Introduction
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get-started/" class="md-nav__link">
+        Get Started
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/" class="md-nav__link">
+        Install
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../github-actions/" class="md-nav__link">
+        GitHub Actions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_5" type="checkbox" id="__nav_5" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5" tabindex="0" aria-expanded="true">
+          Guides
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../secure-supply-chain/" class="md-nav__link">
+        Secure your Kubernetes supply chain with Kustomizer and Cosign
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifacts-encryption/" class="md-nav__link">
+        Encryption at rest with Kustomizer and Age
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deploy-from-git/" class="md-nav__link">
+        Deploy applications from Git with Kustomizer
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Continuous deployment with Kustomizer and Flux
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Continuous deployment with Kustomizer and Flux
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-begin" class="md-nav__link">
+    Before you begin
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#login-to-github-container-registry" class="md-nav__link">
+    Login to GitHub Container Registry
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clone-the-demo-app-repository" class="md-nav__link">
+    Clone the demo app repository
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-the-app-manifests" class="md-nav__link">
+    Publish the app manifests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-flux-to-deploy-the-app" class="md-nav__link">
+    Configure Flux to deploy the app
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promote-changes-to-production" class="md-nav__link">
+    Promote changes to production
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automate-the-artifact-publishing" class="md-nav__link">
+    Automate the artifact publishing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6" tabindex="0" aria-expanded="false">
+          Command Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Command Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Command Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_6_1" type="checkbox" id="__nav_6_1" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_1" tabindex="0" aria-expanded="false">
+          Artifact
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Artifact" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_1">
+          <span class="md-nav__icon md-icon"></span>
+          Artifact
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_push_artifact/" class="md-nav__link">
+        Push
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_tag_artifact/" class="md-nav__link">
+        Tag
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_pull_artifact/" class="md-nav__link">
+        Pull
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_diff_artifact/" class="md-nav__link">
+        Diff
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_inspect_artifact/" class="md-nav__link">
+        Inspect
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_6_2" type="checkbox" id="__nav_6_2" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_2" tabindex="0" aria-expanded="false">
+          Inventory
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Inventory" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_2">
+          <span class="md-nav__icon md-icon"></span>
+          Inventory
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_apply_inventory/" class="md-nav__link">
+        Apply
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_build_inventory/" class="md-nav__link">
+        Build
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_diff_inventory/" class="md-nav__link">
+        Diff
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_inspect_inventory/" class="md-nav__link">
+        Inspect
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_get_inventory/" class="md-nav__link">
+        Get
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_delete_inventory/" class="md-nav__link">
+        Delete
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_3" tabindex="0" aria-expanded="false">
+          Config
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Config" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Config
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_config_init/" class="md-nav__link">
+        Init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_config_view/" class="md-nav__link">
+        View
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " data-md-toggle="__nav_6_4" type="checkbox" id="__nav_6_4" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_4" tabindex="0" aria-expanded="false">
+          Completion
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Completion" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_4">
+          <span class="md-nav__icon md-icon"></span>
+          Completion
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_completion_bash/" class="md-nav__link">
+        Bash
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_completion_fish/" class="md-nav__link">
+        Fish
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_completion_powershell/" class="md-nav__link">
+        Powershell
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/kustomizer_completion_zsh/" class="md-nav__link">
+        ZSH
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-begin" class="md-nav__link">
+    Before you begin
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#login-to-github-container-registry" class="md-nav__link">
+    Login to GitHub Container Registry
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clone-the-demo-app-repository" class="md-nav__link">
+    Clone the demo app repository
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-the-app-manifests" class="md-nav__link">
+    Publish the app manifests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-flux-to-deploy-the-app" class="md-nav__link">
+    Configure Flux to deploy the app
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promote-changes-to-production" class="md-nav__link">
+    Promote changes to production
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automate-the-artifact-publishing" class="md-nav__link">
+    Automate the artifact publishing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="continuous-deployment-with-kustomizer-and-flux">Continuous deployment with Kustomizer and Flux</h1>
+<p>This guide shows you how to continuously deploy applications to Kubernetes
+clusters with Flux using OCI artifacts produced by Kustomizer.</p>
+<p>This guide offers a better alternative to deploying applications
+with GitHub CI (as showcased in the <a href="../deploy-from-git/">Deploy from Git</a> guide).
+Instead of connecting to each Kubernetes cluster from GitHub Actions,
+we'll use CI for pushing OCI artifacts to a container registry, and from
+there, the Kubernetes clusters (running Flux) will drive the app deployment
+themselves. One major advantage to this approach, is that you no longer have
+to deal with securing the access from CI to your production systems.</p>
+<h2 id="before-you-begin">Before you begin</h2>
+<ul>
+<li>Install Kustomizer and the Flux CLI.</li>
+<li>Have a Kubernetes cluster version 1.20 or newer.</li>
+<li>Have a GitHub account.</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Install with Homebrew</p>
+<div class="highlight"><pre><span></span><code>brew install stefanprodan/tap/kustomizer fluxcd/tap/flux
+</code></pre></div>
+</div>
+<h2 id="login-to-github-container-registry">Login to GitHub Container Registry</h2>
+<p>Export you GitHub username:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_USER</span><span class="o">=</span><span class="s2">&quot;YOUR-GITHUB-USERNAME&quot;</span>
+</code></pre></div>
+<p>Generate a <a href="https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry">personal access token (PAT)</a>
+with read and write access to GitHub Container Registry.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;YOUR-GITHUB-PAT&quot;</span>
+</code></pre></div>
+<p>Use the token to sign in to the container registry service at ghcr.io:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$GITHUB_TOKEN</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>login<span class="w"> </span>ghcr.io<span class="w"> </span>-u<span class="w"> </span><span class="si">${</span><span class="nv">GITHUB_USER</span><span class="si">}</span><span class="w"> </span>--password-stdin
+<span class="go">&gt; Login Succeeded</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Other container registries</p>
+<p>Besides GHCR, both Kustomizer and Flux are compatible with Docker Hub, ACR, ECR, GCR,
+self-hosted Docker Registry v2 and any other registry that conforms
+to the <a href="https://opencontainers.org/">Open Container Initiative</a>.</p>
+</div>
+<h2 id="clone-the-demo-app-repository">Clone the demo app repository</h2>
+<p>Clone the Kustomizer Git repository locally:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/stefanprodan/kustomizer
+<span class="nb">cd</span><span class="w"> </span>kustomizer
+</code></pre></div>
+<p>You'll be using a sample web application composed of two <a href="https://github.com/stefanprodan/podinfo">podinfo</a>
+instances called <code>frontend</code> and <code>backend</code>, and a redis instance called <code>cache</code>.
+The web application's Kubernetes configuration is located at <code>./examples/demo-app</code>.</p>
+<h2 id="publish-the-app-manifests">Publish the app manifests</h2>
+<p>Export the repository URL and app version:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">APP_REPO</span><span class="o">=</span><span class="s2">&quot;ghcr.io/</span><span class="si">${</span><span class="nv">GITHUB_USER</span><span class="si">}</span><span class="s2">/kustomizer-demo-app&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">APP_VERSION</span><span class="o">=</span><span class="s2">&quot;1.0.0&quot;</span>
+</code></pre></div>
+<p>Build and push the app manifests to GitHub container registry:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>kustomizer<span class="w"> </span>push<span class="w"> </span>artifact<span class="w"> </span>oci://<span class="si">${</span><span class="nv">APP_REPO</span><span class="si">}</span>:<span class="si">${</span><span class="nv">APP_VERSION</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-k<span class="w"> </span>./examples/demo-app<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source<span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>git<span class="w"> </span>config<span class="w"> </span>--get<span class="w"> </span>remote.origin.url<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--revision<span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>git<span class="w"> </span>branch<span class="w"> </span>--show-current<span class="k">)</span><span class="s2">/</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">&quot;</span>
+<span class="go">building manifests...</span>
+<span class="go">Namespace/kustomizer-demo-app</span>
+<span class="go">ConfigMap/kustomizer-demo-app/redis-config-bd2fcfgt6k</span>
+<span class="go">Service/kustomizer-demo-app/backend</span>
+<span class="go">Service/kustomizer-demo-app/cache</span>
+<span class="go">Service/kustomizer-demo-app/frontend</span>
+<span class="go">Deployment/kustomizer-demo-app/backend</span>
+<span class="go">Deployment/kustomizer-demo-app/cache</span>
+<span class="go">Deployment/kustomizer-demo-app/frontend</span>
+<span class="go">HorizontalPodAutoscaler/kustomizer-demo-app/backend</span>
+<span class="go">HorizontalPodAutoscaler/kustomizer-demo-app/frontend</span>
+<span class="go">pushing image ghcr.io/stefanprodan/kustomizer-demo-app:1.0.0</span>
+<span class="go">published digest ghcr.io/stefanprodan/kustomizer-demo-app@sha256:91d2bd8e0f1620e17e9d4c308ab87903644a952969d8ff52b601be0bffdca096</span>
+</code></pre></div>
+<p>Tag the config image as latest:</p>
+<div class="highlight"><pre><span></span><code>kustomizer<span class="w"> </span>tag<span class="w"> </span>artifact<span class="w"> </span>oci://<span class="si">${</span><span class="nv">APP_REPO</span><span class="si">}</span>:<span class="si">${</span><span class="nv">APP_VERSION</span><span class="si">}</span><span class="w"> </span>latest
+</code></pre></div>
+<h2 id="configure-flux-to-deploy-the-app">Configure Flux to deploy the app</h2>
+<p>First install Flux on your cluster with:</p>
+<div class="highlight"><pre><span></span><code>flux<span class="w"> </span>install
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">GitOps</p>
+<p>For Flux to manage your cluster in a GitOps manner,
+you could use the <a href="https://fluxcd.io/flux/installation/#bootstrap">flux bootstrap</a> instead of <code>flux install</code>.</p>
+</div>
+<p>Create an image pull secret for ghcr.io with:</p>
+<div class="highlight"><pre><span></span><code>flux<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>oci<span class="w"> </span>ghcr-auth<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--url<span class="o">=</span>ghcr.io<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--username<span class="o">=</span>flux<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--password<span class="o">=</span><span class="si">${</span><span class="nv">GITHUB_TOKEN</span><span class="si">}</span>
+</code></pre></div>
+<p>Create a Flux <code>OCIRepository</code> for pulling the latest artifact from GitHub container registry:</p>
+<div class="highlight"><pre><span></span><code>flux<span class="w"> </span>create<span class="w"> </span><span class="nb">source</span><span class="w"> </span>oci<span class="w"> </span>demo-app<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--secret-ref<span class="o">=</span>ghcr-auth<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--url<span class="o">=</span>oci://<span class="si">${</span><span class="nv">APP_REPO</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tag<span class="o">=</span>latest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--interval<span class="o">=</span>1m
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Automated updates</p>
+<p>At every minute, Flux verifies if the latest OCI artifact digest differs from the digest
+of the last downloaded artifact. When a new artifact is tagged as latest, Flux will
+detect the new version and will pull it inside the cluster.</p>
+</div>
+<p>Create a Flux <code>Kustomization</code> for applying the manifests from the artifact on the cluster:</p>
+<div class="highlight"><pre><span></span><code>flux<span class="w"> </span>create<span class="w"> </span>kustomization<span class="w"> </span>demo-app<span class="w"> </span><span class="se">\</span>
+--source<span class="o">=</span>OCIRepository/demo-app<span class="w"> </span><span class="se">\</span>
+--prune<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+--wait<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+--health-check-timeout<span class="o">=</span>3m<span class="w"> </span><span class="se">\</span>
+--interval<span class="o">=</span>10m
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Automated reconciliation</p>
+<p>Every time a new version of the OCI artifact is downloaded, Flux reconciles the
+changes in the Kubernetes manifests from the artifact with the cluster state.</p>
+<p>During a reconciliation, Flux performs these tasks:</p>
+<ul>
+<li>Validates the manifests against the Kubernetes API (<a href="https://kubernetes.io/docs/reference/using-api/server-side-apply/">server-side apply</a> dry run)</li>
+<li>Applies the Kubernetes objects that changed in order (namespaces and other global objects first)</li>
+<li>Deletes the objects that were removed from the latest artifact version</li>
+<li>Waits for the changes to be successfully rollout (Helm upgrades, deployments, jobs, etc)</li>
+<li>Reports the apply diff or any error as Kubernetes events</li>
+</ul>
+</div>
+<p>You can see the apply diff and any other Flux events with:</p>
+<div class="highlight"><pre><span></span><code>kubectl<span class="w"> </span>alpha<span class="w"> </span>events<span class="w"> </span>--for<span class="w"> </span>kustomization/demo-app<span class="w"> </span>-n<span class="w"> </span>flux-system
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Drift detection and correction</p>
+<p>Even if nothing changed in the OCI source, Flux verifies if the cluster
+state has drifted from the desired state. If a drift is detected,
+Flux re-applies the Kubernetes objects that changed and waits for the drift 
+to be corrected. Then it emits a Kubernetes events with the list of objects 
+that were corrected.</p>
+</div>
+<h2 id="promote-changes-to-production">Promote changes to production</h2>
+<p>Assuming you're deploying the <code>latest</code> version to staging, you could introduce 
+a dedicated tag for production e.g. <code>stable</code>.</p>
+<p>On the production cluster, you'll configure Flux to reconcile the artifacts tagged as <code>stable</code>:</p>
+<div class="highlight"><pre><span></span><code>flux<span class="w"> </span>create<span class="w"> </span><span class="nb">source</span><span class="w"> </span>oci<span class="w"> </span>demo-app<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--secret-ref<span class="o">=</span>ghcr-auth<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--url<span class="o">=</span>oci://<span class="si">${</span><span class="nv">APP_REPO</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--tag<span class="o">=</span>stable<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--interval<span class="o">=</span>1m
+</code></pre></div>
+<p>To promote a version tested on staging, you would tag it as stable with:</p>
+<div class="highlight"><pre><span></span><code>kustomizer<span class="w"> </span>tag<span class="w"> </span>artifact<span class="w"> </span>oci://<span class="si">${</span><span class="nv">APP_REPO</span><span class="si">}</span>:<span class="si">${</span><span class="nv">APP_VERSION</span><span class="si">}</span><span class="w"> </span>stable
+</code></pre></div>
+<h2 id="automate-the-artifact-publishing">Automate the artifact publishing</h2>
+<p>You can automate the publishing process by running Kustomizer in CI.</p>
+<p>Here is an example of a GitHub Actions workflow that pushes an OCI artifact
+to GHCR every time there is a change to the Kubernetes configuration:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">publish</span>
+<span class="nt">on</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">push</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">branches</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;main&#39;</span>
+<span class="w">    </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;examples/demo-app/**&#39;</span>
+
+<span class="nt">permissions</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">contents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">read</span>
+<span class="w">  </span><span class="nt">id-token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span>
+<span class="w">  </span><span class="nt">packages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span>
+
+<span class="nt">env</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ARTIFACT</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oci://ghcr.io/${{github.repository_owner}}/${{github.event.repository.name}}</span>
+
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">kustomizer</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Checkout</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Login to GitHub Container Registry</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker/login-action@v2</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">registry</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io</span>
+<span class="w">          </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.actor }}</span>
+<span class="w">          </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.GITHUB_TOKEN }}</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Setup kustomizer</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stefanprodan/kustomizer/action@main</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Push</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">kustomizer push artifact ${ARTIFACT}:${GITHUB_REF_NAME} \</span>
+<span class="w">            </span><span class="no">-k=examples/demo-app \</span>
+<span class="w">            </span><span class="no">--source=${{ github.repositoryUrl }} \</span>
+<span class="w">            </span><span class="no">--revision=&quot;${{ github.ref_name }}/${{ github.sha }}&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tag latest</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">kustomizer tag artifact ${ARTIFACT}:${GITHUB_REF_NAME} latest</span>
+</code></pre></div>
+<p>For more details on how to use Kustomizer within GitHub workflows,
+please see the <a href="../../github-actions/">GitHub Actions documentation</a>.</p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.sections"], "search": "../../assets/javascripts/workers/search.e5c33ebb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.51d95adb.min.js"></script>
+      
+    
+  </body>
+</html>
