@@ -21,13 +21,13 @@ import (
 )
 
 const (
-	VersionAnnotation    = "kustomizer.dev/version"
-	ChecksumAnnotation   = "kustomizer.dev/checksum"
-	CreatedAnnotation    = "kustomizer.dev/created"
-	EncryptedAnnotation  = "kustomizer.dev/encrypted"
-	AgeEncryptionVersion = "age-encryption.org/v1"
-	SourceAnnotation     = "org.opencontainers.image.source"
-	RevisionAnnotation   = "org.opencontainers.image.revision"
+	VersionAnnotation     = "kustomizer.dev/version"
+	ChecksumAnnotation    = "kustomizer.dev/checksum"
+	EncryptedAnnotation   = "kustomizer.dev/encrypted"
+	AgeEncryptionVersion  = "age-encryption.org/v1"
+	OCICreatedAnnotation  = "org.opencontainers.image.created"
+	OCISourceAnnotation   = "org.opencontainers.image.source"
+	OCIRevisionAnnotation = "org.opencontainers.image.revision"
 )
 
 type Metadata struct {
@@ -42,9 +42,9 @@ type Metadata struct {
 
 func (m *Metadata) ToAnnotations() map[string]string {
 	annotations := map[string]string{
-		VersionAnnotation:  m.Version,
-		ChecksumAnnotation: m.Checksum,
-		CreatedAnnotation:  m.Created,
+		VersionAnnotation:    m.Version,
+		ChecksumAnnotation:   m.Checksum,
+		OCICreatedAnnotation: m.Created,
 	}
 
 	if m.Encrypted != "" {
@@ -52,11 +52,11 @@ func (m *Metadata) ToAnnotations() map[string]string {
 	}
 
 	if m.SourceURL != "" {
-		annotations[SourceAnnotation] = m.SourceURL
+		annotations[OCISourceAnnotation] = m.SourceURL
 	}
 
 	if m.SourceRevision != "" {
-		annotations[RevisionAnnotation] = m.SourceRevision
+		annotations[OCIRevisionAnnotation] = m.SourceRevision
 	}
 
 	return annotations
@@ -73,9 +73,9 @@ func GetMetadata(annotations map[string]string) (*Metadata, error) {
 		return nil, fmt.Errorf("'%s' annotation not found", ChecksumAnnotation)
 	}
 
-	created, ok := annotations[CreatedAnnotation]
+	created, ok := annotations[OCICreatedAnnotation]
 	if !ok {
-		return nil, fmt.Errorf("'%s' annotation not found", CreatedAnnotation)
+		return nil, fmt.Errorf("'%s' annotation not found", OCICreatedAnnotation)
 	}
 
 	m := Metadata{
@@ -88,11 +88,11 @@ func GetMetadata(annotations map[string]string) (*Metadata, error) {
 		m.Encrypted = encrypted
 	}
 
-	if sourceURL, ok := annotations[SourceAnnotation]; ok {
+	if sourceURL, ok := annotations[OCISourceAnnotation]; ok {
 		m.SourceURL = sourceURL
 	}
 
-	if sourceRevision, ok := annotations[RevisionAnnotation]; ok {
+	if sourceRevision, ok := annotations[OCIRevisionAnnotation]; ok {
 		m.SourceRevision = sourceRevision
 	}
 
