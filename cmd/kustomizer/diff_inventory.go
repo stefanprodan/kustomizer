@@ -29,8 +29,8 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var diffInventoryCmd = &cobra.Command{

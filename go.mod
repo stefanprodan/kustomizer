@@ -1,10 +1,9 @@
-module github.com/stefanprodan/kustomizer
+module github.com/stefanprodan/kustomizer/v2
 
 go 1.19
 
 require (
 	filippo.io/age v1.0.0
-	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/distribution/distribution/v3 v3.0.0-20221119093643-85d4039064cc
 	github.com/fluxcd/pkg/ssa v0.22.0
 	github.com/google/go-containerregistry v0.12.1

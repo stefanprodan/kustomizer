@@ -22,10 +22,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
 
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var listArtifactCmd = &cobra.Command{

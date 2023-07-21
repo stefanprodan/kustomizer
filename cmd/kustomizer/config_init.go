@@ -18,7 +18,8 @@ package main
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/stefanprodan/kustomizer/pkg/config"
+
+	"github.com/stefanprodan/kustomizer/v2/pkg/config"
 )
 
 var configInit = &cobra.Command{
