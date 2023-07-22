@@ -26,7 +26,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/stefanprodan/kustomizer/pkg/config"
+	"github.com/stefanprodan/kustomizer/v2/pkg/config"
 )
 
 var VERSION = "2.0.0-dev.0"

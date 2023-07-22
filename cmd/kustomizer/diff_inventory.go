@@ -29,8 +29,8 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var diffInventoryCmd = &cobra.Command{
@@ -149,11 +149,11 @@ func runDiffInventoryCmd(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		if change.Action == string(ssa.CreatedAction) {
+		if change.Action == ssa.CreatedAction {
 			rootCmd.Println(`►`, change.Subject, "created")
 		}
 
-		if change.Action == string(ssa.ConfiguredAction) {
+		if change.Action == ssa.ConfiguredAction {
 			rootCmd.Println(`►`, change.Subject, "drifted")
 
 			liveYAML, _ := yaml.Marshal(liveObject)

@@ -19,11 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/spf13/cobra"
+
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var pullArtifactCmd = &cobra.Command{

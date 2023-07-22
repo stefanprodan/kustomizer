@@ -22,7 +22,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/v2/pkg/inventory"
 
 	"github.com/fluxcd/pkg/ssa"
 	"github.com/spf13/cobra"

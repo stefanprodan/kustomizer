@@ -27,8 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/stefanprodan/kustomizer/pkg/inventory"
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/inventory"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var applyInventoryCmd = &cobra.Command{

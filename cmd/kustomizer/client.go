@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
@@ -58,7 +59,12 @@ func newKubeStatusPoller(rcg genericclioptions.RESTClientGetter) (*polling.Statu
 		return nil, err
 	}
 
-	restMapper, err := apiutil.NewDynamicRESTMapper(kubeConfig)
+	httpClient, err := rest.HTTPClientFor(kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	restMapper, err := apiutil.NewDynamicRESTMapper(kubeConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}

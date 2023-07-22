@@ -22,7 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var tagArtifactCmd = &cobra.Command{

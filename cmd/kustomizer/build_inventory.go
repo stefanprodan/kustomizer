@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 	"sigs.k8s.io/yaml"
 
-	"github.com/stefanprodan/kustomizer/pkg/registry"
+	"github.com/stefanprodan/kustomizer/v2/pkg/registry"
 )
 
 var buildInventoryCmd = &cobra.Command{
